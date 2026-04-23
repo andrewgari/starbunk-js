@@ -32,7 +32,8 @@ export type {
 // Health and smoke testing
 export { runSmokeMode } from './health/smoke-mode';
 export { initializeHealthServer } from './health/health-server-init';
-export { setApplicationHealth } from './observability/health-server';
+export type { HealthCheckModule } from './observability/health-server';
+export { setApplicationHealth, registerHealthCheckModule } from './observability/health-server';
 export { shutdownObservability } from './observability/shutdown';
 
 // Types

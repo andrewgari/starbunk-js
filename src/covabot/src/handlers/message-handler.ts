@@ -25,6 +25,7 @@ import {
   LlmContext,
 } from '@/models/memory-types';
 import { VERBOSE_LOGGING } from '@/utils/verbose-mode';
+import { getBotActivityTracker } from '@starbunk/shared/health/bot-activity-tracker';
 
 const logger = logLayer.withPrefix('MessageHandler');
 
@@ -68,6 +69,8 @@ export class MessageHandler {
       return;
     }
 
+    getBotActivityTracker('bot_activity').onMessageReceived();
+
     logger
       .withMetadata({
         message_id: message.id,
@@ -90,6 +93,7 @@ export class MessageHandler {
             message_id: message.id,
           })
           .error('Error processing message for profile');
+        getBotActivityTracker('bot_activity').onError('profile_processing');
       }
     }
 
@@ -114,6 +118,10 @@ export class MessageHandler {
     // Step 1: Make response decision
     const ctx: DecisionContext = { profile, message, botUserId };
     const decision = await this.decisionService.shouldRespond(ctx);
+
+    if (decision.shouldRespond) {
+      getBotActivityTracker('bot_activity').onTriggerFired('response_decision');
+    }
 
     if (!decision.shouldRespond) {
       if (VERBOSE_LOGGING) {
@@ -166,7 +174,13 @@ export class MessageHandler {
 
     // Step 3: Send response
     if (responseContent && responseContent.trim().length > 0) {
-      await this.sendResponse(profile, message, responseContent);
+      try {
+        await this.sendResponse(profile, message, responseContent);
+        getBotActivityTracker('bot_activity').onResponseSent(true);
+      } catch (sendError) {
+        getBotActivityTracker('bot_activity').onResponseSent(false, 'send_failed');
+        throw sendError;
+      }
 
       // Step 4: Record in memory
       await this.memoryService.storeConversation(

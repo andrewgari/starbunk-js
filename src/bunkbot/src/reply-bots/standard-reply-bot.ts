@@ -7,6 +7,7 @@ import { Trigger } from '@/reply-bots/conditions/trigger';
 import { logger } from '@/observability/logger';
 import { getMetricsService } from '@starbunk/shared/observability/metrics-service';
 import { getTraceService } from '@starbunk/shared/observability/trace-service';
+import { getBotActivityTracker } from '@starbunk/shared/health/bot-activity-tracker';
 
 export class StandardReplyBot implements ReplyBot {
   constructor(
@@ -164,6 +165,8 @@ export class StandardReplyBot implements ReplyBot {
               `✓ TRIGGER FIRED - WHAT: ${this.name}/${triggerName}, HOW: ${conditionDescription}, WHEN: ${triggerTimestamp}, WHO: ${message.author.username} (${authorType})`,
             );
 
+          getBotActivityTracker('bot_activity').onTriggerFired(triggerName);
+
           // Track trigger metric
           if (message.guildId && message.channelId) {
             metrics.trackBotTrigger(
@@ -226,11 +229,17 @@ export class StandardReplyBot implements ReplyBot {
           // Send message
           const sendSpan = tracing.startMessageSend(triggerSpan, this.name);
           const sendStartTime = Date.now();
-          await DiscordService.getInstance().sendMessageWithBotIdentity(
-            message,
-            identity,
-            response,
-          );
+          try {
+            await DiscordService.getInstance().sendMessageWithBotIdentity(
+              message,
+              identity,
+              response,
+            );
+            getBotActivityTracker('bot_activity').onResponseSent(true);
+          } catch (sendError) {
+            getBotActivityTracker('bot_activity').onResponseSent(false, 'send_failed');
+            throw sendError;
+          }
           const sendDuration = Date.now() - sendStartTime;
           tracing.endSpanSuccess(sendSpan, {
             'message.send_duration_ms': sendDuration,
@@ -346,6 +355,7 @@ export class StandardReplyBot implements ReplyBot {
             triggerEvalDuration,
           );
         }
+        getBotActivityTracker('bot_activity').onError('trigger_processing');
       }
     }
 
