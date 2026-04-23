@@ -97,7 +97,6 @@
     ]
   },
   "overrides": {
-    "discord.js": "^14.26.3",
     "inflight": "npm:@aashutoshrathi/inflight@^1.0.0",
     "glob": "^10.0.0",
     "undici": ">=6.24.0",
@@ -113,6 +112,11 @@
     "flatted": ">=3.4.2",
     "rollup": ">=4.58.1",
     "lodash-es": ">=4.18.0",
-    "picomatch": ">=4.0.4"
+    "picomatch": ">=4.0.4",
+    "minimatch": ">=9.0.7",
+    "npm": {
+      "@isaacs/brace-expansion": ">=5.0.1"
+    },
+    "@isaacs/brace-expansion": ">=5.0.1"
   }
 }
