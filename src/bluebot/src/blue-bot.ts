@@ -2,6 +2,7 @@ import { Client, Message } from 'discord.js';
 import { logger } from '@/observability/logger';
 import { processMessageByStrategy } from '@/strategy/strategy-router';
 import { getMetricsService } from '@starbunk/shared/observability/metrics-service';
+import { getBotActivityTracker } from '@starbunk/shared/health/bot-activity-tracker';
 
 const e2eAllowedBotIds = process.env.E2E_ALLOWED_BOT_IDS?.split(',').map(s => s.trim()) ?? [];
 
@@ -25,6 +26,7 @@ export class BlueBot {
       }
 
       const metrics = getMetricsService();
+      getBotActivityTracker('bot_activity').onMessageReceived();
 
       // Track message processing
       if (message.guildId && message.channelId) {
@@ -59,6 +61,7 @@ export class BlueBot {
         if (message.guildId) {
           metrics.trackBotError('BlueBot', 'message_handling_error', message.guildId);
         }
+        getBotActivityTracker('bot_activity').onError('message_handling');
       }
     });
   }

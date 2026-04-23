@@ -1,6 +1,7 @@
 import { Message, TextChannel } from 'discord.js';
 import { logger } from '@/observability/logger';
 import { getMetricsService } from '@starbunk/shared/observability/metrics-service';
+import { getBotActivityTracker } from '@starbunk/shared/health/bot-activity-tracker';
 import { BlueRequestStrategy } from '@/strategy/blue-request-strategy';
 import { BlueReplyStrategy } from '@/strategy/blue-reply-strategy';
 
@@ -191,6 +192,7 @@ async function executeStrategy(
     .withMetadata({ strategy_name: name, message_id: message.id })
     .info(`✓ STRATEGY MATCHED - Strategy: ${name}`);
   trackBotTriggerSafe(metrics, 'BlueBot', name, message);
+  getBotActivityTracker('bot_activity').onTriggerFired(name);
 
   // Generate response
   const responseStartTime = Date.now();
@@ -208,6 +210,7 @@ async function executeStrategy(
       })
       .error(`Error generating/sending response: ${name}`);
     trackBotResponseSafe(metrics, 'BlueBot', message, 'error');
+    getBotActivityTracker('bot_activity').onResponseSent(false, 'response_generation_error');
     return false;
   }
 
@@ -259,5 +262,6 @@ async function executeStrategy(
     .info(`✓ BOT RESPONSE SENT - Strategy: ${name}, Duration: ${totalDuration}ms`);
 
   trackBotResponseSafe(metrics, 'BlueBot', message, 'success', totalDuration);
+  getBotActivityTracker('bot_activity').onResponseSent(true);
   return true;
 }

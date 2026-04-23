@@ -62,7 +62,17 @@ export class OllamaProvider implements LlmProvider {
     messages: LlmMessage[],
     options: LlmCompletionOptions,
   ): Promise<LlmCompletionResult> {
-    const model = options.model || this.defaultModel;
+    const requestedModel = options.model;
+    // Only use options.model if it's not a known cloud-provider model name
+    const model =
+      requestedModel &&
+      !requestedModel.startsWith('gemini') &&
+      !requestedModel.startsWith('claude') &&
+      !requestedModel.startsWith('gpt') &&
+      !requestedModel.startsWith('o1') &&
+      !requestedModel.startsWith('o3')
+        ? requestedModel
+        : this.defaultModel;
     const url = `${this.apiUrl}/api/chat`;
 
     logger

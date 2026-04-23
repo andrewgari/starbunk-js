@@ -25,6 +25,7 @@ import {
   LlmContext,
 } from '@/models/memory-types';
 import { VERBOSE_LOGGING } from '@/utils/verbose-mode';
+import { getBotActivityTracker } from '@starbunk/shared/health/bot-activity-tracker';
 
 const logger = logLayer.withPrefix('MessageHandler');
 
@@ -68,6 +69,8 @@ export class MessageHandler {
       return;
     }
 
+    getBotActivityTracker('bot_activity').onMessageReceived();
+
     logger
       .withMetadata({
         message_id: message.id,
@@ -90,6 +93,7 @@ export class MessageHandler {
             message_id: message.id,
           })
           .error('Error processing message for profile');
+        getBotActivityTracker('bot_activity').onError('profile_processing');
       }
     }
 
@@ -115,6 +119,10 @@ export class MessageHandler {
     const ctx: DecisionContext = { profile, message, botUserId };
     const decision = await this.decisionService.shouldRespond(ctx);
 
+    if (decision.shouldRespond) {
+      getBotActivityTracker('bot_activity').onTriggerFired('response_decision');
+    }
+
     if (!decision.shouldRespond) {
       if (VERBOSE_LOGGING) {
         logger
@@ -138,7 +146,16 @@ export class MessageHandler {
     const llmResponse = await this.generateLlmResponse(profile, message, botUserId);
 
     if (llmResponse.shouldIgnore) {
-      if (VERBOSE_LOGGING) {
+      if (decision.reason === 'direct_mention') {
+        logger
+          .withMetadata({
+            profile_id: profile.id,
+            channel_id: message.channelId,
+            author: message.author.username,
+            content_preview: message.content.substring(0, 80),
+          })
+          .warn('LLM returned IGNORE for a direct @mention — this is a prompt compliance failure');
+      } else if (VERBOSE_LOGGING) {
         logger
           .withMetadata({
             profile_id: profile.id,
@@ -157,7 +174,13 @@ export class MessageHandler {
 
     // Step 3: Send response
     if (responseContent && responseContent.trim().length > 0) {
-      await this.sendResponse(profile, message, responseContent);
+      try {
+        await this.sendResponse(profile, message, responseContent);
+        getBotActivityTracker('bot_activity').onResponseSent(true);
+      } catch (sendError) {
+        getBotActivityTracker('bot_activity').onResponseSent(false, 'send_failed');
+        throw sendError;
+      }
 
       // Step 4: Record in memory
       await this.memoryService.storeConversation(

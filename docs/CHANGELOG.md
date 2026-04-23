@@ -1,3 +1,21 @@
+## [1.37.0](https://github.com/andrewgari/starbunk-js/compare/v1.36.2...v1.37.0) (2026-04-23)
+
+### Features
+
+* **health:** add modular health check system ([#671](https://github.com/andrewgari/starbunk-js/issues/671)) ([1e72c4b](https://github.com/andrewgari/starbunk-js/commit/1e72c4b71cd0070ce3f1e2ff879616c44944b983))
+
+## [1.36.2](https://github.com/andrewgari/starbunk-js/compare/v1.36.1...v1.36.2) (2026-04-20)
+
+### Bug Fixes
+
+* **covabot:** fix Ollama model leak and webhook permission fallback ([f35d0a4](https://github.com/andrewgari/starbunk-js/commit/f35d0a43e20367722c7cd2455680f7beef06ee83))
+
+## [1.36.1](https://github.com/andrewgari/starbunk-js/compare/v1.36.0...v1.36.1) (2026-04-20)
+
+### Bug Fixes
+
+* **covabot:** fix LLM provider model fallback and mention response ([#668](https://github.com/andrewgari/starbunk-js/issues/668)) ([2f8081d](https://github.com/andrewgari/starbunk-js/commit/2f8081dec31fc5c0c7091ad0cba4c0629fafde46))
+
 ## [1.36.0](https://github.com/andrewgari/starbunk-js/compare/v1.35.0...v1.36.0) (2026-04-19)
 
 ### Features

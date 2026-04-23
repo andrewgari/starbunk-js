@@ -13,7 +13,7 @@ export interface LlmMessage {
 }
 
 export interface LlmCompletionOptions {
-  model: string;
+  model?: string;
   temperature?: number;
   maxTokens?: number;
 }

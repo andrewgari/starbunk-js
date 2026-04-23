@@ -35,7 +35,14 @@ export class OpenAIProvider implements LlmProvider {
       throw new Error('OpenAI API key not configured');
     }
 
-    const model = options.model || this.defaultModel;
+    const requestedModel = options.model;
+    const model =
+      requestedModel &&
+      (requestedModel.startsWith('gpt-') ||
+        requestedModel.startsWith('o1') ||
+        requestedModel.startsWith('o3'))
+        ? requestedModel
+        : this.defaultModel;
 
     logger
       .withMetadata({ model, messageCount: messages.length })
