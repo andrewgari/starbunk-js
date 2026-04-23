@@ -1,3 +1,9 @@
+## [1.37.0](https://github.com/andrewgari/starbunk-js/compare/v1.36.2...v1.37.0) (2026-04-23)
+
+### Features
+
+* **health:** add modular health check system ([#671](https://github.com/andrewgari/starbunk-js/issues/671)) ([1e72c4b](https://github.com/andrewgari/starbunk-js/commit/1e72c4b71cd0070ce3f1e2ff879616c44944b983))
+
 ## [1.36.2](https://github.com/andrewgari/starbunk-js/compare/v1.36.1...v1.36.2) (2026-04-20)
 
 ### Bug Fixes
