@@ -26,7 +26,7 @@
     "deps:list": "npm list --depth=0"
   },
   "dependencies": {
-    "discord.js": "^14.25.1",
+    "discord.js": "^14.26.3",
     "dotenv": "^17.2.3",
     "fastest-levenshtein": "^1.0.16",
     "loglayer": "^8.4.0",

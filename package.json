@@ -97,14 +97,22 @@
     ]
   },
   "overrides": {
-    "discord.js": "^14.18.0",
+    "discord.js": "^14.26.3",
     "inflight": "npm:@aashutoshrathi/inflight@^1.0.0",
     "glob": "^10.0.0",
-    "undici": ">=7.23.1",
+    "undici": ">=6.24.0",
+    "discord.js": {
+      "undici": ">=6.24.0"
+    },
+    "@discordjs/rest": {
+      "undici": ">=6.24.0"
+    },
     "tar": ">=7.5.3",
     "diff": ">=8.0.3",
     "handlebars": ">=4.7.9",
     "flatted": ">=3.4.2",
-    "rollup": ">=4.58.1"
+    "rollup": ">=4.58.1",
+    "lodash-es": ">=4.18.0",
+    "picomatch": ">=4.0.4"
   }
 }

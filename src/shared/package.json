@@ -57,7 +57,7 @@
     "@opentelemetry/semantic-conventions": "^1.39.0",
     "chalk": "^4.1.2",
     "date-fns": "^4.1.0",
-    "discord.js": "^14.18.0",
+    "discord.js": "^14.26.3",
     "dotenv": "^16.5.0",
     "envalid": "^8.0.0",
     "ioredis": "^5.3.2",
