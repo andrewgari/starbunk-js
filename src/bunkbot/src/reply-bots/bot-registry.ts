@@ -4,6 +4,7 @@ import { logger } from '@/observability/logger';
 import { getMetricsService } from '@starbunk/shared/observability/metrics-service';
 import { getTraceService } from '@starbunk/shared/observability/trace-service';
 import { BotStateManager } from '@/reply-bots/services/bot-state-manager';
+import { getBotActivityTracker } from '@starbunk/shared/health/bot-activity-tracker';
 
 export class BotRegistry {
   private static instance: BotRegistry | null = null;
@@ -55,6 +56,9 @@ export class BotRegistry {
     const metrics = getMetricsService();
     const tracing = getTraceService('bunkbot');
     const stateManager = BotStateManager.getInstance();
+
+    // Track message arrival for silence detection and activity health
+    getBotActivityTracker('bot_activity').onMessageReceived();
 
     // Start root span for message processing
     const messageSpan = tracing.startMessageProcessing(
@@ -162,6 +166,7 @@ export class BotRegistry {
         if (message.guildId) {
           metrics.trackBotError(bot.name, 'message_handling_error', message.guildId);
         }
+        getBotActivityTracker('bot_activity').onError('message_handling');
       }
     }
 
