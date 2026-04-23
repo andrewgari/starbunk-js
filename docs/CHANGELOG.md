@@ -1,3 +1,9 @@
+## [1.38.0](https://github.com/andrewgari/starbunk-js/compare/v1.37.0...v1.38.0) (2026-04-23)
+
+### Features
+
+* **covabot:** add personality generator from Discord message history ([#667](https://github.com/andrewgari/starbunk-js/issues/667)) ([352b84c](https://github.com/andrewgari/starbunk-js/commit/352b84c6efbbe2636b1f50cd83684da1ad454747))
+
 ## [1.37.0](https://github.com/andrewgari/starbunk-js/compare/v1.36.2...v1.37.0) (2026-04-23)
 
 ### Features
