@@ -1,3 +1,9 @@
+## [1.38.1](https://github.com/andrewgari/starbunk-js/compare/v1.38.0...v1.38.1) (2026-04-23)
+
+### Bug Fixes
+
+* **ci:** add workflow_dispatch and --http1.1 to deploy workflow ([cc06e0c](https://github.com/andrewgari/starbunk-js/commit/cc06e0cec29643c672239f3ea88ffddab1143116))
+
 ## [1.38.0](https://github.com/andrewgari/starbunk-js/compare/v1.37.0...v1.38.0) (2026-04-23)
 
 ### Features
