@@ -5,6 +5,7 @@ on:
     workflows: ["CD / Main Merge"]
     types: [completed]
     branches: [main]
+  workflow_dispatch:
 
 jobs:
   deploy_to_production:
@@ -12,8 +13,8 @@ jobs:
     runs-on: ubuntu-latest
     concurrency: production
     environment: production
-    # Only deploy when the CD workflow succeeded
-    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    # Only deploy when triggered by a successful CD workflow, or manually
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
     steps:
       # Skip gracefully when deploy secrets are not configured (e.g. forks, dev repos)
       - name: Preflight — check deploy secrets
@@ -31,7 +32,7 @@ jobs:
       - name: Trigger Portainer Stack Update
         if: steps.preflight.outputs.run_deploy == 'true'
         run: |
-          STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" --http1.1 \
             -X POST "${{ secrets.PORTAINER_WEBHOOK_URL }}")
           echo "Portainer webhook response: $STATUS"
           if ! echo "$STATUS" | grep -qE '^(200|204)$'; then
