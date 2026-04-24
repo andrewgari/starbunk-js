@@ -32,7 +32,7 @@
     "format": "prettier --write \"src/*/src/**/*.ts\"",
     "type-check": "tsc --build --dry",
     "clean": "tsc --build --clean",
-    "docker:build": "docker compose -f infrastructure/docker/docker-compose.yml build",
+    "docker:build": "docker compose build",
     "check:all": "npm run type-check && npm run lint && npm run test",
     "check:ci": "npm run type-check && npm run lint && npm run test",
     "health-check": "scripts/monitoring/structure-health-check.sh",

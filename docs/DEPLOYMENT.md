@@ -207,7 +207,7 @@ chmod -R 755 /mnt/user/appdata/starbunk
 #### Copy Configuration Files
 ```bash
 # Copy docker-compose.yml to Unraid
-scp infrastructure/docker/docker-compose.yml root@your-unraid-ip:/mnt/user/appdata/starbunk/
+scp docker-compose.yml root@your-unraid-ip:/mnt/user/appdata/starbunk/
 
 # Copy bot configurations (from examples if needed)
 scp -r examples/config/bunkbot/* root@your-unraid-ip:/mnt/user/appdata/starbunk/config/bunkbot/
@@ -460,7 +460,7 @@ docker-compose -f docker-compose.yml up -d --force-recreate
 
 #### Option 3: Rollback to Specific Image Tag
 ```bash
-# Edit infrastructure/docker/docker-compose.yml and change image tags
+# Edit docker-compose.yml and change image tags
 # From:
 #   image: ghcr.io/andrewgari/bunkbot:main
 # To:
