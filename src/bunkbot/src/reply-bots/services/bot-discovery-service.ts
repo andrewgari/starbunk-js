@@ -5,6 +5,12 @@ import { BotRegistry } from '@/reply-bots/bot-registry';
 import { parseYamlBots, botSchema } from '@/serialization/yaml-bot-parser';
 import { YamlBotFactory } from '@/serialization/yaml-bot-factory';
 import { logger } from '@/observability/logger';
+import type { YamlValidationError } from '@/health/bunkbot-health';
+
+export interface DiscoveryResult {
+  configs: z.infer<typeof botSchema>[];
+  yamlErrors: YamlValidationError[];
+}
 
 export class BotDiscoveryService {
   constructor(
@@ -12,7 +18,7 @@ export class BotDiscoveryService {
     private registry: BotRegistry,
   ) {}
 
-  public async discover(botsDirectory: string): Promise<z.infer<typeof botSchema>[]> {
+  public async discover(botsDirectory: string): Promise<DiscoveryResult> {
     logger.withMetadata({ directory: botsDirectory }).info('Starting bot discovery');
 
     if (!fs.existsSync(botsDirectory)) {
@@ -31,6 +37,7 @@ export class BotDiscoveryService {
     let totalBotsLoaded = 0;
     let totalBotsFailed = 0;
     const allConfigs: z.infer<typeof botSchema>[] = [];
+    const yamlErrors: YamlValidationError[] = [];
 
     for (const file of files) {
       const filePath = path.join(botsDirectory, file);
@@ -65,6 +72,8 @@ export class BotDiscoveryService {
               .info(`Bot created and registered`);
           } catch (error) {
             totalBotsFailed++;
+            const errMsg = error instanceof Error ? error.message : String(error);
+            yamlErrors.push({ file, error: `Bot '${config.name}': ${errMsg}` });
             logger
               .withError(error)
               .withMetadata({
@@ -76,6 +85,8 @@ export class BotDiscoveryService {
         }
       } catch (error) {
         totalBotsFailed++;
+        const errMsg = error instanceof Error ? error.message : String(error);
+        yamlErrors.push({ file, error: errMsg });
         logger
           .withError(error)
           .withMetadata({
@@ -92,9 +103,10 @@ export class BotDiscoveryService {
         files_processed: files.length,
         bots_loaded: totalBotsLoaded,
         bots_failed: totalBotsFailed,
+        yaml_errors: yamlErrors.length,
       })
       .info('Bot discovery complete');
 
-    return allConfigs;
+    return { configs: allConfigs, yamlErrors };
   }
 }

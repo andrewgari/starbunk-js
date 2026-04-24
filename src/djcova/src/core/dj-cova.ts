@@ -16,6 +16,7 @@ import { logger } from '../observability/logger';
 import { DJCovaErrorCode } from '../errors';
 import { logError } from '@starbunk/shared/errors';
 import { getDJCovaMetrics } from '../observability/djcova-metrics';
+import { updateAudioPlayerStatus } from '../health/djcova-health';
 
 type AudioPlayerLike = ReturnType<typeof createAudioPlayer>;
 type AudioResourceLike = ReturnType<typeof createAudioResource>;
@@ -111,6 +112,7 @@ export class DJCova {
       // consuming audio frames, not just when player.play() was called.
       if (this.guildId) {
         getDJCovaMetrics().trackAudioPlaybackStarted(this.guildId);
+        updateAudioPlayerStatus(this.guildId, AudioPlayerStatus.Playing);
       }
     });
 
@@ -118,6 +120,9 @@ export class DJCova {
       logger.info('⏸️ Playback idle');
       logger.debug('Starting idle timer due to playback idle');
       this.idleManager?.startIdleTimer();
+      if (this.guildId) {
+        updateAudioPlayerStatus(this.guildId, AudioPlayerStatus.Idle);
+      }
     });
 
     this.player.on('error', (error: Error) => {

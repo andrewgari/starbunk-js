@@ -18,6 +18,8 @@ import { initializeHealthServer } from '@starbunk/shared/health/health-server-in
 import { setApplicationHealth } from '@starbunk/shared/observability/health-server';
 import { shutdownObservability } from '@starbunk/shared/observability/shutdown';
 import { CovaBot, CovaBotConfig } from './cova-bot';
+import { registerDependencyHealthChecks } from '@starbunk/shared/health/dependency-health';
+import { registerConfigHealthCheck } from '@starbunk/shared/health/config-health';
 
 // Load environment variables from .env file
 config();
@@ -102,6 +104,25 @@ async function main(): Promise<void> {
   } catch (error) {
     logger.withError(error).error('Failed to initialize health server');
     throw error;
+  }
+
+  // Register config validation health check
+  registerConfigHealthCheck(['DISCORD_TOKEN'], 'covabot');
+
+  // Register dependency health checks for Postgres, Redis, Qdrant if configured
+  const postgresHost = process.env.POSTGRES_HOST;
+  if (postgresHost) {
+    registerDependencyHealthChecks({
+      postgres: {
+        host: postgresHost,
+        port: parseInt(process.env.POSTGRES_PORT || '5432', 10),
+        database: process.env.POSTGRES_DB || 'starbunk',
+        user: process.env.POSTGRES_USER || 'starbunk',
+        password: process.env.POSTGRES_PASSWORD || '',
+      },
+      redisUrl: process.env.REDIS_URL,
+      qdrantUrl: process.env.QDRANT_URL,
+    });
   }
 
   // Handle graceful shutdown

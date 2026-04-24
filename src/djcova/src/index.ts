@@ -4,7 +4,10 @@ import { setupDJCovaLogging } from './observability/setup-logging';
 import { logger } from './observability/logger';
 import { Client, Events, GatewayIntentBits, Message, VoiceChannel } from 'discord.js';
 import { initializeHealthServer } from '@starbunk/shared/health/health-server-init';
-import { setApplicationHealth, registerHealthCheckModule } from '@starbunk/shared/observability/health-server';
+import {
+  setApplicationHealth,
+  registerHealthCheckModule,
+} from '@starbunk/shared/observability/health-server';
 import { shutdownObservability } from '@starbunk/shared/observability/shutdown';
 import { initializeCommands } from '@starbunk/shared/discord/command-registry';
 import { getMetricsService } from '@starbunk/shared/observability/metrics-service';
@@ -12,6 +15,7 @@ import { getDJCovaMetrics } from './observability/djcova-metrics';
 import { SharedErrorCode, logError } from '@starbunk/shared/errors';
 import { commands } from '@/commands';
 import { getDJCovaService } from '@/core/djcova-factory';
+import { registerDJCovaHealthModule } from './health/djcova-health';
 
 // Setup logging mixins before creating any logger instances
 setupDJCovaLogging();
@@ -44,7 +48,9 @@ registerHealthCheckModule({
       const lastErrorAgo = djcovaHealth.lastErrorAt ? Date.now() - djcovaHealth.lastErrorAt : null;
       if (lastErrorAgo !== null && lastErrorAgo < 5 * 60 * 1000) {
         status = status === 'ok' ? 'degraded' : status;
-        warnings.push(`${djcovaHealth.errorCount} Discord error(s), most recent ${Math.floor(lastErrorAgo / 1000)}s ago`);
+        warnings.push(
+          `${djcovaHealth.errorCount} Discord error(s), most recent ${Math.floor(lastErrorAgo / 1000)}s ago`,
+        );
       }
     }
 
@@ -54,7 +60,9 @@ registerHealthCheckModule({
       discord_ready: djcovaHealth.discordReady,
       commands_ready: djcovaHealth.commandsReady,
       error_count: djcovaHealth.errorCount,
-      last_error_at: djcovaHealth.lastErrorAt ? new Date(djcovaHealth.lastErrorAt).toISOString() : null,
+      last_error_at: djcovaHealth.lastErrorAt
+        ? new Date(djcovaHealth.lastErrorAt).toISOString()
+        : null,
       uptime_ms: uptimeMs,
     };
   },
@@ -66,6 +74,7 @@ registerHealthCheckModule({
 const serviceName = process.env.SERVICE_NAME || 'djcova';
 getMetricsService(serviceName);
 getDJCovaMetrics();
+registerDJCovaHealthModule();
 // Main execution
 async function main(): Promise<void> {
   logger.info('DJCova main() function starting...');
@@ -117,7 +126,7 @@ async function main(): Promise<void> {
       djcovaHealth.discordReady = true;
     });
 
-    client.on(Events.Error, (error) => {
+    client.on(Events.Error, error => {
       logger.withError(error).error('Discord client error');
       djcovaHealth.errorCount++;
       djcovaHealth.lastErrorAt = Date.now();

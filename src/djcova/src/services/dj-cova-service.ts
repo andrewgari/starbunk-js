@@ -11,6 +11,7 @@ import { getDJCovaMetrics } from '../observability/djcova-metrics';
 import { DJCovaErrorCode } from '../errors';
 import { getMetricsService } from '@starbunk/shared/observability/metrics-service';
 import { logError } from '@starbunk/shared/errors';
+import { markPlayCommandIssued } from '../health/djcova-health';
 
 /**
  * DJCovaService - Business logic layer
@@ -119,6 +120,7 @@ export class DJCovaService {
     // play() uses stopAudioOnly() internally which preserves the voice subscription,
     // so the subscription is safe to register here.
     this.djCova.setSubscription(subscription);
+    markPlayCommandIssued(guildId);
     logger.info('Starting playback...');
     await this.djCova.play(url);
     logger.info('✅ Playback started successfully');
@@ -151,6 +153,7 @@ export class DJCovaService {
     getDJCovaMetrics().trackVoiceJoin(guildId, 'joined');
     this.djCova.initializeIdleManagement(guildId, voiceChannel.id, notifyFn);
     this.djCova.setSubscription(subscription);
+    markPlayCommandIssued(guildId);
     await this.djCova.play(url);
   }
 
