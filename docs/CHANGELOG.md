@@ -1,3 +1,9 @@
+## [1.38.3](https://github.com/andrewgari/starbunk-js/compare/v1.38.2...v1.38.3) (2026-04-24)
+
+### Bug Fixes
+
+* **ci:** pass env-file to both pull and up steps, fix Discord secret ([7e2680f](https://github.com/andrewgari/starbunk-js/commit/7e2680f1e8af08e298be40c5d5eeec2b33787a7d))
+
 ## [1.38.2](https://github.com/andrewgari/starbunk-js/compare/v1.38.1...v1.38.2) (2026-04-24)
 
 ### Bug Fixes
