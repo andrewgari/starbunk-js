@@ -1,3 +1,9 @@
+## [1.38.7](https://github.com/andrewgari/starbunk-js/compare/v1.38.6...v1.38.7) (2026-04-24)
+
+### Bug Fixes
+
+* **ci:** remove watchtower from compose, fix deploy workflow ([#673](https://github.com/andrewgari/starbunk-js/issues/673)) ([a717630](https://github.com/andrewgari/starbunk-js/commit/a7176304bff6eb9c5c0e4dbae2a0337ca8367b6f))
+
 ## [1.38.6](https://github.com/andrewgari/starbunk-js/compare/v1.38.5...v1.38.6) (2026-04-24)
 
 ### Bug Fixes
