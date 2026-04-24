@@ -134,6 +134,12 @@ jobs:
           yt-dlp --version
       - name: Run DJCova pipeline tests
         run: npm run test:djcova:pipeline
+        env:
+          # GitHub-hosted runners are blocked by YouTube. Layer 1 (binary checks)
+          # runs fine; Layers 2-4 (yt-dlp stream + demuxProbe + DJCova.play) are
+          # skipped via describe.skipIf so CI validates binary availability only.
+          # Run without this flag locally or on a self-hosted runner for full coverage.
+          SKIP_NETWORK_TESTS: 'true'
 
   bluebot_validation:
     name: BlueBot Validation
