@@ -1,3 +1,9 @@
+## [1.38.4](https://github.com/andrewgari/starbunk-js/compare/v1.38.3...v1.38.4) (2026-04-24)
+
+### Bug Fixes
+
+* **ci:** remove Discord notification from deploy workflow ([2d8488c](https://github.com/andrewgari/starbunk-js/commit/2d8488c92b676db2f81320548bdb7e05bd0f5926))
+
 ## [1.38.3](https://github.com/andrewgari/starbunk-js/compare/v1.38.2...v1.38.3) (2026-04-24)
 
 ### Bug Fixes
