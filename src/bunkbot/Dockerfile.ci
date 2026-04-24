@@ -6,6 +6,7 @@ FROM node:22-alpine AS runtime
 
 # Build-time arguments for non-secret environment variables
 ARG NODE_ENV=production
+ARG APP_VERSION=dev
 ARG LOG_LEVEL=info
 ARG DEBUG_MODE=false
 ARG ENABLE_METRICS=true
@@ -34,6 +35,7 @@ COPY --chown=bunkbot:bunkbot src/bunkbot/dist ./src/bunkbot/dist
 
 # Set default environment variables from build args
 ENV NODE_ENV=${NODE_ENV} \
+    APP_VERSION=${APP_VERSION} \
     LOG_LEVEL=${LOG_LEVEL} \
     DEBUG_MODE=${DEBUG_MODE} \
     ENABLE_METRICS=${ENABLE_METRICS} \

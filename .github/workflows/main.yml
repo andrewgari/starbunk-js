@@ -106,7 +106,10 @@ jobs:
             docker tag "${IMAGE}:sha-${HASH}" "${IMAGE}:main"
           else
             echo "Building image ${IMAGE}:main"
-            docker build -f ./src/${APP}/Dockerfile.ci -t ${IMAGE}:main -t ${IMAGE}:sha-${HASH} .
+            APP_VERSION=$(cat VERSION 2>/dev/null || echo "dev")
+            docker build -f ./src/${APP}/Dockerfile.ci \
+              --build-arg APP_VERSION="${APP_VERSION}" \
+              -t ${IMAGE}:main -t ${IMAGE}:sha-${HASH} .
             docker push ${IMAGE}:sha-${HASH}
           fi
           docker tag "${IMAGE}:main" "${IMAGE}:sha-${GIT_SHA}"

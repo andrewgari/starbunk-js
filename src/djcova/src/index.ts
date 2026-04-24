@@ -16,6 +16,7 @@ import { SharedErrorCode, logError } from '@starbunk/shared/errors';
 import { commands } from '@/commands';
 import { getDJCovaService } from '@/core/djcova-factory';
 import { registerDJCovaHealthModule } from './health/djcova-health';
+import { notifyStartupIfNewVersion } from '@starbunk/shared/discord/startup-dm';
 
 // Setup logging mixins before creating any logger instances
 setupDJCovaLogging();
@@ -124,6 +125,9 @@ async function main(): Promise<void> {
       logger.info('🎵 DJCova is ready and connected to Discord');
       logger.info(`Bot user: ${client.user?.tag}`);
       djcovaHealth.discordReady = true;
+      notifyStartupIfNewVersion(client, 'DJCova').catch(() => {
+        /* non-fatal */
+      });
     });
 
     client.on(Events.Error, error => {
