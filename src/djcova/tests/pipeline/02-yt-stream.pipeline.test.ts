@@ -22,6 +22,10 @@ if (ffmpegStaticPath && !process.env.FFMPEG_PATH) {
 const STABLE_VIDEO_URL = 'https://www.youtube.com/watch?v=jNQXAC9IVRw';
 const STREAM_DATA_TIMEOUT_MS = 30_000;
 
+// GitHub-hosted runners are YouTube-blocked. Set SKIP_NETWORK_TESTS=true to skip
+// Layers 2-4 in CI; only Layer 1 (binary checks) runs on GitHub runners.
+const skipNetworkTests = process.env.SKIP_NETWORK_TESTS === 'true';
+
 const activeProcesses: ChildProcess[] = [];
 
 function trackProcess(proc: ChildProcess): ChildProcess {
@@ -43,7 +47,7 @@ afterEach(() => {
 // Tests
 // ---------------------------------------------------------------------------
 
-describe('Layer 2: yt-dlp Stream Production', () => {
+describe.skipIf(skipNetworkTests)('Layer 2: yt-dlp Stream Production', () => {
   describe('successful stream', () => {
     it(
       'produces audio bytes from a known YouTube URL within 30 seconds',

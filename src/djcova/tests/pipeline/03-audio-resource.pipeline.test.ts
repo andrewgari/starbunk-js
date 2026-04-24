@@ -28,6 +28,8 @@ if (ffmpegStaticPath && !process.env.FFMPEG_PATH) {
 const STABLE_VIDEO_URL = 'https://www.youtube.com/watch?v=jNQXAC9IVRw';
 const PROBE_TIMEOUT_MS = 35_000;
 
+const skipNetworkTests = process.env.SKIP_NETWORK_TESTS === 'true';
+
 const activeProcesses: ChildProcess[] = [];
 
 afterEach(() => {
@@ -44,7 +46,7 @@ afterEach(() => {
 // Tests
 // ---------------------------------------------------------------------------
 
-describe('Layer 3: Audio Resource Creation', () => {
+describe.skipIf(skipNetworkTests)('Layer 3: Audio Resource Creation', () => {
   describe('demuxProbe', () => {
     it(
       'detects the audio format of a live yt-dlp stream',

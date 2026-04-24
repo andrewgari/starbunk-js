@@ -45,6 +45,8 @@ if (ffmpegStaticPath && !process.env.FFMPEG_PATH) {
 const STABLE_VIDEO_URL = 'https://www.youtube.com/watch?v=jNQXAC9IVRw';
 const PLAY_TIMEOUT_MS = 35_000;
 
+const skipNetworkTests = process.env.SKIP_NETWORK_TESTS === 'true';
+
 // ---------------------------------------------------------------------------
 // Minimal fake subscription
 // Only satisfies DJCova's subscription diagnostic check in the Playing event handler.
@@ -63,7 +65,7 @@ function fakeSubscription() {
 // Tests
 // ---------------------------------------------------------------------------
 
-describe('Layer 4: DJCova Full Play Pipeline', () => {
+describe.skipIf(skipNetworkTests)('Layer 4: DJCova Full Play Pipeline', () => {
   const instances: DJCova[] = [];
 
   function createDJCova(): DJCova {
