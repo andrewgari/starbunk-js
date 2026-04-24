@@ -31,7 +31,7 @@ export class BlueRequestStrategy extends SendAPIMessageStrategy {
         author_id: this.triggeringEvent!.author.id,
         message_id: this.triggeringEvent!.id,
       })
-      .info(`${this.name}: Routing to ${this.selectedStrategy.constructor.name}`);
+      .debug(`${this.name}: Routing to ${this.selectedStrategy.constructor.name}`);
 
     return this.selectedStrategy.shouldTrigger();
   }

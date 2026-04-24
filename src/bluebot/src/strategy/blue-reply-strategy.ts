@@ -81,7 +81,7 @@ export class BlueReplyStrategy extends SendAPIMessageStrategy {
     // Murder only if: enemy says mean word AND we can murder AND within reply window
     const shouldMurder = shouldTriggerEnemy && this.shouldMurder(message) && withinReplyWindow;
     // Confirm if: within reply window AND it's a short message
-    const shouldComfirm = withinReplyWindow && shouldTriggerConfirm;
+    const shouldConfirm = withinReplyWindow && shouldTriggerConfirm;
 
     logger
       .withMetadata({
@@ -97,7 +97,7 @@ export class BlueReplyStrategy extends SendAPIMessageStrategy {
         should_trigger_confirm: shouldTriggerConfirm,
         should_trigger_enemy: shouldTriggerEnemy,
         should_murder: shouldMurder,
-        should_confirm: shouldComfirm,
+        should_confirm: shouldConfirm,
       })
       .debug(`${this.name}: Sub-strategy evaluation complete`);
 
@@ -109,20 +109,20 @@ export class BlueReplyStrategy extends SendAPIMessageStrategy {
         .withMetadata({
           strategy_name: this.name,
           message_id: message.id,
-          selected_sub_strategy: 'ConfirmEnemyStrategy',
+          selected_sub_strategy: enemyStrategy.constructor.name,
         })
         .info(`${this.name}: Selected MURDER — enemy triggered within reply window`);
       return true;
     }
 
-    if (shouldComfirm) {
+    if (shouldConfirm) {
       this.selectedStrategy = confirmStrategy;
       this.clearLastBlueResponse();
       logger
         .withMetadata({
           strategy_name: this.name,
           message_id: message.id,
-          selected_sub_strategy: 'ReplyConfirmStrategy',
+          selected_sub_strategy: confirmStrategy.constructor.name,
         })
         .info(`${this.name}: Selected CONFIRM — within reply window with confirmation phrase`);
       return true;
@@ -135,7 +135,7 @@ export class BlueReplyStrategy extends SendAPIMessageStrategy {
         .withMetadata({
           strategy_name: this.name,
           message_id: message.id,
-          selected_sub_strategy: 'DefaultStrategy',
+          selected_sub_strategy: defaultStrategy.constructor.name,
         })
         .info(`${this.name}: Selected DEFAULT — blue keyword matched`);
     } else {
@@ -184,7 +184,12 @@ export class BlueReplyStrategy extends SendAPIMessageStrategy {
 
   private clearLastBlueResponse() {
     this.lastBlueResponse = new Date(0);
-    logger.withMetadata({ strategy_name: this.name }).debug(`${this.name}: Reply window cleared`);
+    logger
+      .withMetadata({
+        strategy_name: this.name,
+        last_blue_response: this.lastBlueResponse.toISOString(),
+      })
+      .debug(`${this.name}: Reply window cleared`);
   }
 
   private updateLastMurderResponse() {
@@ -199,7 +204,12 @@ export class BlueReplyStrategy extends SendAPIMessageStrategy {
 
   private clearLastMurderResponse() {
     this.lastMurderResponse = new Date(0);
-    logger.withMetadata({ strategy_name: this.name }).debug(`${this.name}: Murder window cleared`);
+    logger
+      .withMetadata({
+        strategy_name: this.name,
+        last_murder_response: this.lastMurderResponse.toISOString(),
+      })
+      .debug(`${this.name}: Murder window cleared`);
   }
 
   /**
