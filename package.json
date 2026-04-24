@@ -24,6 +24,7 @@
     "test:containers": "npm run test:bunkbot && npm run test:djcova && npm run test:covabot && npm run test:bluebot",
     "test:bunkbot": "cd src/bunkbot && npm test",
     "test:djcova": "cd src/djcova && npm test",
+    "test:djcova:pipeline": "cd src/djcova && npm run test:pipeline",
     "test:covabot": "cd src/covabot && npm test",
     "test:bluebot": "cd src/bluebot && npm test",
     "test:e2e": "cd src/e2e && npm test",
