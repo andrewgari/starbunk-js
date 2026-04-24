@@ -26,6 +26,12 @@ runs:
         USER_ID: ${{ inputs.user_id }}
         MESSAGE: ${{ inputs.message }}
       run: |
+        # Skip silently if either required value is missing
+        if [ -z "${BOT_TOKEN}" ] || [ -z "${USER_ID}" ]; then
+          echo "::warning::discord-dm: BOT_TOKEN or USER_ID not set — skipping notification"
+          exit 0
+        fi
+
         # Open (or reuse) a DM channel with the target user
         CHANNEL_RESPONSE=$(curl -sf -X POST \
           -H "Authorization: Bot ${BOT_TOKEN}" \
