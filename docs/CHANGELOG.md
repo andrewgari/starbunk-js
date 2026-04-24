@@ -1,3 +1,13 @@
+## [1.41.0](https://github.com/andrewgari/starbunk-js/compare/v1.40.0...v1.41.0) (2026-04-24)
+
+### Features
+
+* **ci:** add Discord notifications to CD pipeline ([#677](https://github.com/andrewgari/starbunk-js/issues/677)) ([d271a85](https://github.com/andrewgari/starbunk-js/commit/d271a85474085ca72e6fc6a5990c923d8ed95988))
+
+### Bug Fixes
+
+* **ci:** remove secrets context from workflow if conditions ([#679](https://github.com/andrewgari/starbunk-js/issues/679)) ([e73660c](https://github.com/andrewgari/starbunk-js/commit/e73660cc597e062374704b9b4b5b93fca05b9742))
+
 ## [1.40.0](https://github.com/andrewgari/starbunk-js/compare/v1.39.0...v1.40.0) (2026-04-24)
 
 ### Features
