@@ -1,3 +1,9 @@
+## [1.38.2](https://github.com/andrewgari/starbunk-js/compare/v1.38.1...v1.38.2) (2026-04-24)
+
+### Bug Fixes
+
+* **ci:** replace Portainer webhook with self-hosted runner SSH deploy ([cc885d4](https://github.com/andrewgari/starbunk-js/commit/cc885d4ff4b93d0189828f8f6ad94382e70f2886))
+
 ## [1.38.1](https://github.com/andrewgari/starbunk-js/compare/v1.38.0...v1.38.1) (2026-04-23)
 
 ### Bug Fixes
