@@ -1,3 +1,9 @@
+## [1.39.0](https://github.com/andrewgari/starbunk-js/compare/v1.38.7...v1.39.0) (2026-04-24)
+
+### Features
+
+* **bluebot:** add decision-flow logging to reply and request strategies ([#674](https://github.com/andrewgari/starbunk-js/issues/674)) ([393eba6](https://github.com/andrewgari/starbunk-js/commit/393eba6bb83264efcf03ab57853f7ad877c0b565))
+
 ## [1.38.7](https://github.com/andrewgari/starbunk-js/compare/v1.38.6...v1.38.7) (2026-04-24)
 
 ### Bug Fixes
