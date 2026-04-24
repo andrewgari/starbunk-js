@@ -27,6 +27,7 @@ import { logger } from '../observability/logger';
 import { getMusicConfig } from '../config/music-config';
 import { DJCovaErrorCode } from '../errors';
 import { logError } from '@starbunk/shared/errors';
+import { updateVoiceConnectionStatus, clearGuildState } from '../health/djcova-health';
 import {
   ConnectionHealthMonitor,
   ConnectionHealthMonitorConfig,
@@ -150,6 +151,7 @@ export function createVoiceConnection(
     logger.debug(
       `Voice connection state changed: ${oldState.status} -> ${newState.status} for channel: ${channel.name}`,
     );
+    updateVoiceConnectionStatus(channel.guild.id, newState.status);
   });
 
   logger.debug('Voice connection event handlers registered');
@@ -186,6 +188,7 @@ export function disconnectVoiceConnection(guildId: string): void {
       );
     }
   }
+  clearGuildState(guildId);
 }
 
 /**

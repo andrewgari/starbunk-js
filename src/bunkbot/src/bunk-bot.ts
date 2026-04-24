@@ -12,6 +12,7 @@ import { commands } from '@/commands';
 import { ConfigServer } from '@/observability/config-server';
 import { BotStrategyBuilder } from '@/reply-bots/strategies/bot-strategy-builder';
 import type { SendWebhookMessageStrategy } from '@starbunk/shared/strategy/send-webhook-message-strategy';
+import { registerBunkBotHealthModule } from '@/health/bunkbot-health';
 
 /**
  * Main BunkBot application class
@@ -80,7 +81,10 @@ export class BunkBot {
     BotRegistry.setInstance(this.botRegistry); // Make registry accessible globally
     const factory = new YamlBotFactory();
     const discovery = new BotDiscoveryService(factory, this.botRegistry);
-    const botConfigs = await discovery.discover(botsDir);
+    const { configs: botConfigs, yamlErrors } = await discovery.discover(botsDir);
+
+    // Register health module reporting active bots and any YAML validation errors
+    registerBunkBotHealthModule(yamlErrors);
 
     // Build strategy pool from discovered bot configs
     this.strategyPool = BotStrategyBuilder.buildAllFromConfigs(botConfigs);
