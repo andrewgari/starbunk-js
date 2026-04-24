@@ -1,5 +1,10 @@
 name: Deploy Production Tag
 
+# Deployment is pull-based: Watchtower runs on the production server, polls GHCR
+# every 5 minutes, and restarts containers when new images are detected.
+# This workflow runs on a GitHub-managed runner and only verifies that the
+# expected images are accessible in GHCR before Watchtower picks them up.
+
 on:
   workflow_run:
     workflows: ["CD / Main Merge"]
@@ -8,40 +13,35 @@ on:
   workflow_dispatch:
 
 jobs:
-  deploy_to_production:
-    name: Deploy Production
+  verify_images:
+    name: Verify GHCR Images
     runs-on: ubuntu-latest
-    concurrency: production
-    environment: production
-    # Only deploy when triggered by a successful CD workflow, or manually
+    # Only run when triggered by a successful CD workflow, or manually
     if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
-    env:
-      COMPOSE_ENV_FILE: ${{ vars.DEPLOY_ENV_FILE || '/mnt/user/appdata/starbunk-js/.env' }}
     steps:
-      - name: Setup SSH
-        run: |
-          mkdir -p ~/.ssh
-          printf '%s\n' "${{ secrets.DEPLOY_SSH_KEY }}" > ~/.ssh/deploy_key
-          chmod 600 ~/.ssh/deploy_key
-          ssh-keyscan -H "${{ secrets.DEPLOY_HOST }}" >> ~/.ssh/known_hosts
+      - name: Login to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Login to GHCR on server
-        env:
-          GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          REPO_OWNER: ${{ github.repository_owner }}
+      - name: Verify images are available in GHCR
         run: |
-          ssh -i ~/.ssh/deploy_key \
-            "${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }}" \
-            "echo \"$GHCR_TOKEN\" | docker login ghcr.io --username \"$REPO_OWNER\" --password-stdin"
-
-      - name: Pull latest images
-        run: |
-          ssh -i ~/.ssh/deploy_key \
-            "${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }}" \
-            "docker compose --env-file \"$COMPOSE_ENV_FILE\" pull"
-
-      - name: Deploy
-        run: |
-          ssh -i ~/.ssh/deploy_key \
-            "${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }}" \
-            "docker compose --env-file \"$COMPOSE_ENV_FILE\" up -d --remove-orphans"
+          OWNER_LC=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
+          FAILED=0
+          for APP in bunkbot covabot djcova bluebot; do
+            IMAGE="ghcr.io/${OWNER_LC}/${APP}:main"
+            echo "Checking ${IMAGE}..."
+            if docker manifest inspect "${IMAGE}" > /dev/null 2>&1; then
+              echo "  ✓ ${IMAGE} is accessible"
+            else
+              echo "  ✗ ${IMAGE} not found or not accessible"
+              FAILED=1
+            fi
+          done
+          if [ "$FAILED" -eq 1 ]; then
+            echo "One or more images failed verification."
+            exit 1
+          fi
+          echo "All images verified. Watchtower will pull and redeploy within 5 minutes."
