@@ -455,10 +455,10 @@ services:
       start_period: 30s
       retries: 5
 
-  # Watchtower - Automatic container update service (pull-based CD)
-  # Watches containers labelled com.centurylinklabs.watchtower.enable=true and restarts
-  # them whenever a new image is pushed to GHCR.  No inbound connections required.
-  # Required .env vars on the host: GHCR_USER, GHCR_TOKEN (read:packages PAT)
+  # Watchtower - Automatic container update service (push-triggered CD)
+  # Triggered by CI via HTTP API over Tailscale after images land in GHCR.
+  # Falls back to hourly polling if the HTTP trigger is missed.
+  # Required .env vars on the host: GHCR_USER, GHCR_TOKEN, WATCHTOWER_TOKEN
   watchtower:
     image: containrrr/watchtower:latest
     container_name: starbunk-watchtower
@@ -468,15 +468,22 @@ services:
     environment:
       # Only update containers that explicitly opt in via label
       - WATCHTOWER_LABEL_ENABLE=true
-      # Poll GHCR every 5 minutes
-      - WATCHTOWER_POLL_INTERVAL=300
+      # Hourly fallback poll — CI triggers updates immediately via HTTP API
+      - WATCHTOWER_POLL_INTERVAL=3600
       # Remove old images after update to reclaim disk space
       - WATCHTOWER_CLEANUP=true
       # Include containers that are currently restarting
       - WATCHTOWER_INCLUDE_RESTARTING=true
+      # HTTP API — CI POSTs /v1/update over Tailscale to trigger immediate pull
+      - WATCHTOWER_HTTP_API_UPDATE=true
+      - WATCHTOWER_HTTP_API_TOKEN=${WATCHTOWER_TOKEN}
       # GHCR credentials — store in the host .env file, never commit
       - REPO_USER=${GHCR_USER}
       - REPO_PASS=${GHCR_TOKEN}
+    ports:
+      # Bound to all interfaces so Tailscale traffic reaches it.
+      # Protected by WATCHTOWER_HTTP_API_TOKEN — do not expose to the internet.
+      - "8080:8080"
     networks:
       - starbunk-network
     logging:
