@@ -1,3 +1,9 @@
+## [1.42.0](https://github.com/andrewgari/starbunk-js/compare/v1.41.0...v1.42.0) (2026-04-24)
+
+### Features
+
+* **bots:** send Discord DM when a bot starts after a version update ([#681](https://github.com/andrewgari/starbunk-js/issues/681)) ([e8f8cd2](https://github.com/andrewgari/starbunk-js/commit/e8f8cd28156db705e815ca1045e9d42f11c7c471))
+
 ## [1.41.0](https://github.com/andrewgari/starbunk-js/compare/v1.40.0...v1.41.0) (2026-04-24)
 
 ### Features
