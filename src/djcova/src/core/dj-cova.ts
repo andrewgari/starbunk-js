@@ -91,29 +91,40 @@ export class DJCova {
 
     this.player.on(AudioPlayerStatus.Playing, () => {
       logger.info('▶️ Playback started');
-      // Diagnostic: detect conditions that cause silent playback
+
+      // Confirm or deny that audio is actually reaching the voice channel.
+      // This is the definitive check: if the player is Playing but either the
+      // subscription is missing or the connection is not Ready, audio frames
+      // are being discarded and the user hears silence.
       if (!this.currentSubscription) {
         logger.error(
-          '❌ Player started but has no active voice subscription — audio will be silent! Check subscription setup.',
+          '❌ SILENT FAILURE: Player is Playing but no voice subscription exists — audio is lost. ' +
+            'Ensure setSubscription() is called before play().',
         );
+        if (this.guildId) {
+          getDJCovaMetrics().trackSilentFailure(this.guildId, 'no_subscription');
+        }
       } else {
         const connStatus = this.currentSubscription.connection.state.status;
         if (connStatus !== VoiceConnectionStatus.Ready) {
           logger.error(
-            `❌ Player started but voice connection is not Ready (state: ${connStatus}) — audio will be silent!`,
+            `❌ SILENT FAILURE: Player is Playing but voice connection is ${connStatus} — audio is lost.`,
           );
+          if (this.guildId) {
+            getDJCovaMetrics().trackSilentFailure(this.guildId, 'connection_not_ready');
+          }
         } else {
-          logger.debug('✅ Voice subscription active and connection Ready at playback start');
+          logger.info('✅ Audio confirmed flowing: subscription active and connection Ready');
+          // Record the metric here — at this point Discord Voice has actually started
+          // consuming audio frames, not just when player.play() was called.
+          if (this.guildId) {
+            getDJCovaMetrics().trackAudioPlaybackStarted(this.guildId);
+          }
         }
       }
+
       logger.debug('Resetting idle timer due to playback start');
       this.idleManager?.resetIdleTimer();
-      // Record the metric here — at this point Discord Voice has actually started
-      // consuming audio frames, not just when player.play() was called.
-      if (this.guildId) {
-        getDJCovaMetrics().trackAudioPlaybackStarted(this.guildId);
-        updateAudioPlayerStatus(this.guildId, AudioPlayerStatus.Playing);
-      }
     });
 
     this.player.on(AudioPlayerStatus.Idle, () => {
@@ -149,8 +160,44 @@ export class DJCova {
     logger.debug('Audio player event handlers registered');
   }
 
+  /**
+   * Log the state of every dependency that can cause silent playback BEFORE
+   * any async work begins.  This means that when a user reports "no sound",
+   * the logs contain a snapshot of what was wrong at call time, not just
+   * after-the-fact hints from the Playing event handler.
+   */
+  private logPreFlightState(url: string): void {
+    const hasSubscription = !!this.currentSubscription;
+    const connectionStatus = this.currentSubscription?.connection?.state?.status;
+    const connectionReady = connectionStatus === VoiceConnectionStatus.Ready;
+    const ffmpegPath = process.env.FFMPEG_PATH;
+
+    logger.debug(
+      `Pre-flight: url=${url} subscription=${hasSubscription} connection=${connectionStatus ?? 'none'} ffmpeg=${ffmpegPath ?? 'unset'}`,
+    );
+
+    if (!hasSubscription) {
+      logger.error(
+        '❌ PRE-FLIGHT: No voice subscription registered. ' +
+          'Audio will be silently discarded — call setSubscription() before play().',
+      );
+    } else if (!connectionReady) {
+      logger.error(
+        `❌ PRE-FLIGHT: Voice connection is not Ready (status: ${connectionStatus}). ` +
+          'Audio will be silently discarded.',
+      );
+    } else {
+      logger.debug('✅ PRE-FLIGHT OK: subscription present and connection Ready');
+    }
+
+    if (!ffmpegPath) {
+      logger.error('❌ PRE-FLIGHT: FFMPEG_PATH not set — demuxProbe / transcoding will fail');
+    }
+  }
+
   async play(url: string): Promise<void> {
     logger.info(`🎵 Playing: ${url}`);
+    this.logPreFlightState(url);
     logger.debug('Stopping any existing playback (preserving voice subscription)...');
     // Stop audio only — do NOT unsubscribe from the voice connection, or the
     // new audio will have no subscriber and play silently into the void.

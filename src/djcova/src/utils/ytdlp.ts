@@ -151,8 +151,15 @@ export function getYouTubeAudioStream(url: string): {
     }
   });
 
-  // Propagate stdout errors for better diagnostics
+  // Propagate stdout errors for better diagnostics.
+  // ERR_STREAM_PREMATURE_CLOSE fires whenever we call stream.destroy() or
+  // SIGKILL the process — it is expected on every stop/skip and must not be
+  // treated as an error, otherwise logs fill with false alarms.
   (ytdlpProcess.stdout as Readable).on('error', (e: Error) => {
+    if ((e as NodeJS.ErrnoException).code === 'ERR_STREAM_PREMATURE_CLOSE') {
+      logger.debug('yt-dlp stdout closed early (expected on intentional stop/skip)');
+      return;
+    }
     logError(logger, DJCovaErrorCode.DJCOVA_AUDIO_STREAM_ERROR, 'yt-dlp stdout error', {
       cause: e,
       url,
