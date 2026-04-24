@@ -455,6 +455,40 @@ services:
       start_period: 30s
       retries: 5
 
+  # Watchtower - Automatic container update service (pull-based CD)
+  # Watches containers labelled com.centurylinklabs.watchtower.enable=true and restarts
+  # them whenever a new image is pushed to GHCR.  No inbound connections required.
+  # Required .env vars on the host: GHCR_USER, GHCR_TOKEN (read:packages PAT)
+  watchtower:
+    image: containrrr/watchtower:latest
+    container_name: starbunk-watchtower
+    restart: unless-stopped
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    environment:
+      # Only update containers that explicitly opt in via label
+      - WATCHTOWER_LABEL_ENABLE=true
+      # Poll GHCR every 5 minutes
+      - WATCHTOWER_POLL_INTERVAL=300
+      # Remove old images after update to reclaim disk space
+      - WATCHTOWER_CLEANUP=true
+      # Include containers that are currently restarting
+      - WATCHTOWER_INCLUDE_RESTARTING=true
+      # GHCR credentials — store in the host .env file, never commit
+      - REPO_USER=${GHCR_USER}
+      - REPO_PASS=${GHCR_TOKEN}
+    networks:
+      - starbunk-network
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    labels:
+      - com.starbunk.service=watchtower
+      # Watchtower should not update itself
+      - com.centurylinklabs.watchtower.enable=false
+
 networks:
   starbunk-network:
     driver: bridge
