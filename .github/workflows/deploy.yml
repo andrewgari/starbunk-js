@@ -10,7 +10,7 @@ on:
 jobs:
   deploy_to_production:
     name: Deploy Production
-    runs-on: self-hosted
+    runs-on: ubuntu-latest
     concurrency: production
     environment: production
     # Only deploy when triggered by a successful CD workflow, or manually
@@ -18,19 +18,30 @@ jobs:
     env:
       COMPOSE_ENV_FILE: ${{ vars.DEPLOY_ENV_FILE || '/mnt/user/appdata/starbunk-js/.env' }}
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - name: Setup SSH
+        run: |
+          mkdir -p ~/.ssh
+          printf '%s\n' "${{ secrets.DEPLOY_SSH_KEY }}" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan -H "${{ secrets.DEPLOY_HOST }}" >> ~/.ssh/known_hosts
 
-      - name: Login to GHCR
-        uses: docker/login-action@v3
-        with:
-          registry: ghcr.io
-          username: ${{ github.repository_owner }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Login to GHCR on server
+        env:
+          GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO_OWNER: ${{ github.repository_owner }}
+        run: |
+          ssh -i ~/.ssh/deploy_key \
+            "${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }}" \
+            "echo \"$GHCR_TOKEN\" | docker login ghcr.io --username \"$REPO_OWNER\" --password-stdin"
 
       - name: Pull latest images
-        run: docker compose --env-file "$COMPOSE_ENV_FILE" pull
+        run: |
+          ssh -i ~/.ssh/deploy_key \
+            "${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }}" \
+            "docker compose --env-file \"$COMPOSE_ENV_FILE\" pull"
 
       - name: Deploy
-        run: docker compose --env-file "$COMPOSE_ENV_FILE" up -d --remove-orphans
-
+        run: |
+          ssh -i ~/.ssh/deploy_key \
+            "${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }}" \
+            "docker compose --env-file \"$COMPOSE_ENV_FILE\" up -d --remove-orphans"
