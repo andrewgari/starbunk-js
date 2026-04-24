@@ -15,6 +15,8 @@ jobs:
     environment: production
     # Only deploy when triggered by a successful CD workflow, or manually
     if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
+    env:
+      COMPOSE_ENV_FILE: ${{ vars.DEPLOY_ENV_FILE || '/mnt/user/appdata/starbunk-js/.env' }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -27,12 +29,10 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Pull latest images
-        run: |
-          docker compose pull
+        run: docker compose --env-file "$COMPOSE_ENV_FILE" pull
 
       - name: Deploy
-        run: |
-          docker compose --env-file ${{ vars.DEPLOY_ENV_FILE }} up -d --remove-orphans
+        run: docker compose --env-file "$COMPOSE_ENV_FILE" up -d --remove-orphans
 
       - name: Notify Discord Deployment
         uses: rjstone/discord-webhook-notify@v1
