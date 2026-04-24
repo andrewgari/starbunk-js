@@ -1,3 +1,9 @@
+## [1.40.0](https://github.com/andrewgari/starbunk-js/compare/v1.39.0...v1.40.0) (2026-04-24)
+
+### Features
+
+* **observability:** enhance health servers with bot-specific checks (closes [#670](https://github.com/andrewgari/starbunk-js/issues/670)) ([#676](https://github.com/andrewgari/starbunk-js/issues/676)) ([6f68cc0](https://github.com/andrewgari/starbunk-js/commit/6f68cc0a7bd00d19ca27cd43c09cbbf9a65dad5c))
+
 ## [1.39.0](https://github.com/andrewgari/starbunk-js/compare/v1.38.7...v1.39.0) (2026-04-24)
 
 ### Features
