@@ -1,3 +1,9 @@
+## [1.38.5](https://github.com/andrewgari/starbunk-js/compare/v1.38.4...v1.38.5) (2026-04-24)
+
+### Bug Fixes
+
+* **covabot:** add better-sqlite3 as runtime dependency in shared package ([b101a0f](https://github.com/andrewgari/starbunk-js/commit/b101a0f0b599635a28d87d2b6241940adfd7c237))
+
 ## [1.38.4](https://github.com/andrewgari/starbunk-js/compare/v1.38.3...v1.38.4) (2026-04-24)
 
 ### Bug Fixes
