@@ -45,3 +45,26 @@ jobs:
             exit 1
           fi
           echo "All images verified. Watchtower will pull and redeploy within 5 minutes."
+
+      - name: Notify Discord — deploy queued
+        if: success() && vars.DISCORD_WEBHOOK_URL != ''
+        uses: rjstone/discord-webhook-notify@v1
+        with:
+          severity: info
+          text: "**Production deploy queued**"
+          details: >
+            🟢 All images verified in GHCR.
+            Watchtower will pull and restart containers within **5 minutes**.
+          webhookUrl: ${{ vars.DISCORD_WEBHOOK_URL }}
+
+      - name: Notify Discord — image verification failed
+        if: failure() && vars.DISCORD_WEBHOOK_URL != ''
+        uses: rjstone/discord-webhook-notify@v1
+        with:
+          severity: error
+          text: "**Deploy verification FAILED**"
+          details: >
+            ❌ One or more images could not be verified in GHCR.
+            Watchtower may not be able to pull the new images.
+            — [View run](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})
+          webhookUrl: ${{ vars.DISCORD_WEBHOOK_URL }}
