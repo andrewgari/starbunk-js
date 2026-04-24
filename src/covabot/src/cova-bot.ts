@@ -9,6 +9,7 @@ import { Client, Events, GatewayIntentBits, Message } from 'discord.js';
 import { logLayer } from '@starbunk/shared/observability/log-layer';
 import { setApplicationHealth } from '@starbunk/shared/observability/health-server';
 import { DiscordService } from '@starbunk/shared/discord/discord-service';
+import { notifyStartupIfNewVersion } from '@starbunk/shared/discord/startup-dm';
 import { PostgresService } from '@starbunk/shared/database';
 import { initializeDatabase } from '@/database';
 import { MemoryService } from '@/services/memory-service';
@@ -304,6 +305,9 @@ export class CovaBot {
           guild_count: readyClient.guilds.cache.size,
         })
         .info('Discord client ready');
+      notifyStartupIfNewVersion(readyClient, 'CovaBot').catch(() => {
+        /* non-fatal */
+      });
     });
 
     // Prevent uncaught exceptions from gateway/network errors

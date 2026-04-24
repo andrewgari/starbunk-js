@@ -39,8 +39,12 @@ services:
       - DEBUG_MODE=${DEBUG_MODE:-false}
       - TESTING_SERVER_IDS=${TESTING_SERVER_IDS:-}
       - TESTING_CHANNEL_IDS=${TESTING_CHANNEL_IDS:-}
+
+      # Startup notifications
+      - DISCORD_NOTIFY_USER_ID=${DISCORD_NOTIFY_USER_ID:-}
     volumes:
       - ${HOST_WORKDIR}/config/bunkbot:/app/config:ro
+      - ${HOST_WORKDIR}/data/bunkbot:/app/data
     ports:
       - "${BUNKBOT_WEB_PORT:-7081}:7081"
     networks:
@@ -104,6 +108,10 @@ services:
       - DEBUG_MODE=${DEBUG_MODE:-false}
       - TESTING_SERVER_IDS=${TESTING_SERVER_IDS:-}
       - TESTING_CHANNEL_IDS=${TESTING_CHANNEL_IDS:-}
+
+      # Startup notifications (data dir is /data for djcova, not /app/data)
+      - DISCORD_NOTIFY_USER_ID=${DISCORD_NOTIFY_USER_ID:-}
+      - STARTUP_DM_DATA_DIR=/data
     volumes:
       - ${HOST_WORKDIR}/config/djcova:/app/config:ro
       - ${HOST_WORKDIR}/data/djcova:/data
@@ -207,6 +215,9 @@ services:
       - COVABOT_VERBOSE=${COVABOT_VERBOSE:-false}
       # Prompt-level logging (set to true to log raw LLM responses — very noisy)
       - COVABOT_LOG_PROMPTS=${COVABOT_LOG_PROMPTS:-false}
+
+      # Startup notifications
+      - DISCORD_NOTIFY_USER_ID=${DISCORD_NOTIFY_USER_ID:-}
     volumes:
       - ${HOST_WORKDIR}/config/covabot:/app/config:ro
       - ${HOST_WORKDIR}/data/covabot:/app/data
@@ -279,6 +290,9 @@ services:
       - DEBUG_MODE=${DEBUG_MODE:-false}
       - TESTING_SERVER_IDS=${TESTING_SERVER_IDS:-}
       - TESTING_CHANNEL_IDS=${TESTING_CHANNEL_IDS:-}
+
+      # Startup notifications
+      - DISCORD_NOTIFY_USER_ID=${DISCORD_NOTIFY_USER_ID:-}
     volumes:
       - ${HOST_WORKDIR}/config/bluebot:/app/config:ro
       - ${HOST_WORKDIR}/data/bluebot:/app/data
