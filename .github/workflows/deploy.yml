@@ -10,40 +10,34 @@ on:
 jobs:
   deploy_to_production:
     name: Deploy Production
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     concurrency: production
     environment: production
     # Only deploy when triggered by a successful CD workflow, or manually
     if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
     steps:
-      # Skip gracefully when deploy secrets are not configured (e.g. forks, dev repos)
-      - name: Preflight — check deploy secrets
-        id: preflight
-        env:
-          WEBHOOK_URL: ${{ secrets.PORTAINER_WEBHOOK_URL }}
-        run: |
-          if [[ -n "$WEBHOOK_URL" ]]; then
-            echo "run_deploy=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "::notice title=Deploy Skipped::PORTAINER_WEBHOOK_URL not configured in the 'production' environment — skipping deployment."
-            echo "run_deploy=false" >> "$GITHUB_OUTPUT"
-          fi
+      - name: Checkout
+        uses: actions/checkout@v4
 
-      - name: Trigger Portainer Stack Update
-        if: steps.preflight.outputs.run_deploy == 'true'
+      - name: Login to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Pull latest images
         run: |
-          STATUS=$(curl -s -o /dev/null -w "%{http_code}" --http1.1 \
-            -X POST "${{ secrets.PORTAINER_WEBHOOK_URL }}")
-          echo "Portainer webhook response: $STATUS"
-          if ! echo "$STATUS" | grep -qE '^(200|204)$'; then
-            echo "::error::Portainer webhook returned unexpected status: $STATUS"
-            exit 1
-          fi
+          docker compose pull
+
+      - name: Deploy
+        run: |
+          docker compose --env-file ${{ vars.DEPLOY_ENV_FILE }} up -d --remove-orphans
 
       - name: Notify Discord Deployment
         uses: rjstone/discord-webhook-notify@v1
-        if: always() && steps.preflight.outputs.run_deploy == 'true'
+        if: always()
         with:
           severity: ${{ job.status == 'success' && 'info' || 'error' }}
           details: Production deployment finished with status ${{ job.status }}
-          webhookUrl: ${{ vars.DISCORD_WEBHOOK_URL }}
+          webhookUrl: ${{ secrets.DISCORD_WEBHOOK_URL }}
