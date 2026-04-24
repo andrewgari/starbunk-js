@@ -24,6 +24,37 @@ describe('BaseBlueStrategy', () => {
     strategy.reset();
   });
 
+  describe('Reply window', () => {
+    test('should not open reply window when message does not contain blue', async () => {
+      const message = createMockMessage({ content: 'hello world', authorId: friendUserId });
+      const triggered = await strategy.shouldTrigger(message as Message);
+      expect(triggered).toBe(false);
+      expect(strategy.lastBlueResponseTime).toEqual(new Date(0));
+    });
+
+    test('should open reply window only when message matches', async () => {
+      const message = createMockMessage({ content: 'blue', authorId: friendUserId });
+      const triggered = await strategy.shouldTrigger(message as Message);
+      expect(triggered).toBe(true);
+      expect(strategy.lastBlueResponseTime).not.toEqual(new Date(0));
+    });
+
+    test('should not allow confirm path without a prior blue trigger', async () => {
+      // Confirm path requires withinReplyWindow — which needs a prior blue response.
+      // A non-matching message must not silently open that window.
+      const nonBlue = createMockMessage({ content: 'hello world', authorId: friendUserId });
+      await strategy.shouldTrigger(nonBlue as Message);
+      expect(strategy.lastBlueResponseTime).toEqual(new Date(0));
+
+      // Advance 1 minute and send a short confirm phrase
+      vi.advanceTimersByTime(60 * 1000);
+      const confirm = createMockMessage({ content: 'yes', authorId: friendUserId });
+      const triggered = await strategy.shouldTrigger(confirm as Message);
+      // Confirm must NOT fire because the reply window was never opened
+      expect(triggered).toBe(false);
+    });
+  });
+
   describe('Message tracking', () => {
     test('should record the last time it asked if somebody said blue', async () => {
       const message = createMockMessage({ content: 'blue', authorId: friendUserId });

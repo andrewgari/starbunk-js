@@ -2,6 +2,7 @@ import { Message } from 'discord.js';
 import { DefaultStrategy } from '@/strategy/blue-default-strategy';
 import { ReplyConfirmStrategy } from '@/strategy/blue-reply-confirm-strategy';
 import { ConfirmEnemyStrategy } from '@/strategy/blue-reply-confirm-enemy-strategy';
+import { logger } from '@/observability/logger';
 import { SendAPIMessageStrategy } from '@starbunk/shared/strategy/send-api-message-strategy';
 import { BotStrategy } from '@starbunk/shared';
 
@@ -63,7 +64,10 @@ export class BlueReplyStrategy extends SendAPIMessageStrategy {
   }
 
   async shouldRespond(message: Message): Promise<boolean> {
+    const now = message.createdAt.getTime();
     const withinReplyWindow = this.isWithinReplyWindow(message);
+    const timeSinceLastBlue = now - this.lastBlueResponse.getTime();
+    const timeSinceLastMurder = now - this.lastMurderResponse.getTime();
 
     // Initialize sub-strategies
     const defaultStrategy = new DefaultStrategy(this.triggeringEvent);
@@ -77,23 +81,71 @@ export class BlueReplyStrategy extends SendAPIMessageStrategy {
     // Murder only if: enemy says mean word AND we can murder AND within reply window
     const shouldMurder = shouldTriggerEnemy && this.shouldMurder(message) && withinReplyWindow;
     // Confirm if: within reply window AND it's a short message
-    const shouldComfirm = withinReplyWindow && shouldTriggerConfirm;
+    const shouldConfirm = withinReplyWindow && shouldTriggerConfirm;
+
+    logger
+      .withMetadata({
+        strategy_name: this.name,
+        message_id: message.id,
+        author_id: message.author.id,
+        within_reply_window: withinReplyWindow,
+        time_since_last_blue_ms: timeSinceLastBlue,
+        time_since_last_murder_ms: timeSinceLastMurder,
+        reply_window_ms: this.replyWindow,
+        murder_window_ms: this.murderWindow,
+        should_trigger_default: shouldTriggerDefault,
+        should_trigger_confirm: shouldTriggerConfirm,
+        should_trigger_enemy: shouldTriggerEnemy,
+        should_murder: shouldMurder,
+        should_confirm: shouldConfirm,
+      })
+      .debug(`${this.name}: Sub-strategy evaluation complete`);
 
     if (shouldMurder) {
       this.selectedStrategy = enemyStrategy;
       this.updateLastMurderResponse();
       this.clearLastBlueResponse(); // Clear the reply window after murder, forcing silence
+      logger
+        .withMetadata({
+          strategy_name: this.name,
+          message_id: message.id,
+          selected_sub_strategy: enemyStrategy.constructor.name,
+        })
+        .info(`${this.name}: Selected MURDER — enemy triggered within reply window`);
       return true;
     }
 
-    if (shouldComfirm) {
+    if (shouldConfirm) {
       this.selectedStrategy = confirmStrategy;
       this.clearLastBlueResponse();
+      logger
+        .withMetadata({
+          strategy_name: this.name,
+          message_id: message.id,
+          selected_sub_strategy: confirmStrategy.constructor.name,
+        })
+        .info(`${this.name}: Selected CONFIRM — within reply window with confirmation phrase`);
       return true;
     }
 
     this.selectedStrategy = defaultStrategy;
-    this.updateLastBlueResponse();
+    if (shouldTriggerDefault) {
+      this.updateLastBlueResponse();
+      logger
+        .withMetadata({
+          strategy_name: this.name,
+          message_id: message.id,
+          selected_sub_strategy: defaultStrategy.constructor.name,
+        })
+        .info(`${this.name}: Selected DEFAULT — blue keyword matched`);
+    } else {
+      logger
+        .withMetadata({
+          strategy_name: this.name,
+          message_id: message.id,
+        })
+        .debug(`${this.name}: No sub-strategy matched — not responding`);
+    }
     return shouldTriggerDefault;
   }
 
@@ -119,20 +171,45 @@ export class BlueReplyStrategy extends SendAPIMessageStrategy {
     }
     return false;
   }
+
   private updateLastBlueResponse() {
     this.lastBlueResponse = new Date();
+    logger
+      .withMetadata({
+        strategy_name: this.name,
+        last_blue_response: this.lastBlueResponse.toISOString(),
+      })
+      .debug(`${this.name}: Reply window opened`);
   }
 
   private clearLastBlueResponse() {
     this.lastBlueResponse = new Date(0);
+    logger
+      .withMetadata({
+        strategy_name: this.name,
+        last_blue_response: this.lastBlueResponse.toISOString(),
+      })
+      .debug(`${this.name}: Reply window cleared`);
   }
 
   private updateLastMurderResponse() {
     this.lastMurderResponse = new Date();
+    logger
+      .withMetadata({
+        strategy_name: this.name,
+        last_murder_response: this.lastMurderResponse.toISOString(),
+      })
+      .debug(`${this.name}: Murder window opened`);
   }
 
   private clearLastMurderResponse() {
     this.lastMurderResponse = new Date(0);
+    logger
+      .withMetadata({
+        strategy_name: this.name,
+        last_murder_response: this.lastMurderResponse.toISOString(),
+      })
+      .debug(`${this.name}: Murder window cleared`);
   }
 
   /**

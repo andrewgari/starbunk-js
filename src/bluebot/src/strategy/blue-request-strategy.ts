@@ -18,18 +18,20 @@ export class BlueRequestStrategy extends SendAPIMessageStrategy {
 
   async shouldTrigger(): Promise<boolean> {
     const enemyStrategy = new RequestConfirmEnemyStrategy(this.triggeringEvent);
-    if (await enemyStrategy.shouldTrigger()) {
+    const isEnemy = await enemyStrategy.shouldTrigger();
+    if (isEnemy) {
       this.selectedStrategy = enemyStrategy;
     }
 
     logger
       .withMetadata({
         strategy_name: this.name,
-        sub_strategy: typeof this.selectedStrategy,
+        is_enemy: isEnemy,
+        selected_sub_strategy: this.selectedStrategy.constructor.name,
         author_id: this.triggeringEvent!.author.id,
         message_id: this.triggeringEvent!.id,
       })
-      .debug(`${this.name}: Routing to ${this.selectedStrategy} strategy`);
+      .debug(`${this.name}: Routing to ${this.selectedStrategy.constructor.name}`);
 
     return this.selectedStrategy.shouldTrigger();
   }
