@@ -2,30 +2,7 @@
 
 ## Overview
 
-StarBunk-js implements a comprehensive security scanning and gating policy to protect our homelab infrastructure and Unraid deployment. We use [Snyk](https://snyk.io) for vulnerability scanning of both code dependencies and Docker containers.
-
-## 🛡️ Security Gates
-
-### Pull Request Requirements
-
-All pull requests must pass security validation before merging:
-
-1. **Code Scanning**: Snyk scans all npm workspace dependencies
-   - **Enforcement Level**: High and Critical vulnerabilities block PR merges
-   - **Scope**: All workspaces (shared package + apps)
-   - **Threshold**: `--severity-threshold=high`
-
-2. **Container Scanning**: Snyk scans all Docker images
-   - **Containers Scanned**: bunkbot, djcova, covabot, bluebot
-   - **Base Image Checks**: Node:20-alpine OS-level vulnerabilities
-   - **Enforcement Level**: High and Critical vulnerabilities block PR merges
-
-### Main Branch Monitoring
-
-When code is merged to `main`:
-- **Continuous Monitoring**: Snyk Monitor tracks the security posture of deployed code
-- **Dashboard**: View real-time vulnerability status at [Snyk Dashboard](https://app.snyk.io)
-- **Container Scans**: All production containers are scanned and monitored
+StarBunk-js provides security scanning capabilities for vulnerability detection in code dependencies and Docker containers using [Snyk](https://snyk.io).
 
 ## 🔧 Setup Instructions
 
@@ -33,27 +10,18 @@ When code is merged to `main`:
 
 #### For Repository Maintainers
 
-The `SNYK_TOKEN` must be configured in CircleCI:
+The `SNYK_TOKEN` can be configured in GitHub Secrets for the manual rescan workflow:
 
 1. Go to your Snyk account: https://app.snyk.io/account
 2. Navigate to **Account Settings** → **General** → **Auth Token**
 3. Copy your API token
-4. In CircleCI:
-   - Go to **Project Settings** → **Environment Variables**
-   - Add a new variable: `SNYK_TOKEN` = `<your-token>`
-
-#### For Contributors
-
-If you see this error in your PR:
-```
-❌ ERROR: SNYK_TOKEN is not set
-```
-
-Contact a repository maintainer to configure the Snyk token in CircleCI.
+4. In GitHub repository:
+   - Go to **Settings** → **Secrets and variables** → **Actions**
+   - Add a new secret: `SNYK_TOKEN` = `<your-token>`
 
 ### 2. Local Development Setup
 
-To run Snyk scans locally before pushing:
+To run Snyk scans locally:
 
 ```bash
 # Install Snyk CLI
@@ -66,8 +34,8 @@ snyk auth
 snyk test --all-projects --severity-threshold=high
 
 # Run container scan for a specific app
-docker build -f src/bunkbot/Dockerfile.ci -t starbunk-bunkbot:local .
-snyk container test starbunk-bunkbot:local --file=src/bunkbot/Dockerfile.ci --severity-threshold=high
+docker build -f src/bunkbot/Dockerfile -t starbunk-bunkbot:local .
+snyk container test starbunk-bunkbot:local --file=src/bunkbot/Dockerfile --severity-threshold=high
 ```
 
 ## 📊 Using snyk-to-html for Local Reports
@@ -132,7 +100,7 @@ snyk test --all-projects --severity-threshold=high
 
 # Quick container rescan (example for bunkbot)
 npm run build:shared && npm run build:bunkbot
-docker build -f src/bunkbot/Dockerfile.ci -t starbunk-bunkbot:local .
+docker build -f src/bunkbot/Dockerfile -t starbunk-bunkbot:local .
 snyk container test starbunk-bunkbot:local --severity-threshold=high
 ```
 
@@ -141,15 +109,15 @@ snyk container test starbunk-bunkbot:local --severity-threshold=high
 #### Exit Codes
 
 - **0**: No vulnerabilities found at or above threshold
-- **1**: Vulnerabilities found at or above threshold (PR will be blocked)
+- **1**: Vulnerabilities found at or above threshold
 - **2**: Snyk authentication or configuration error
 
 #### Severity Levels
 
 | Severity | Description | Action Required |
 |----------|-------------|-----------------|
-| **Critical** | Immediate threat, exploitable | **Fix immediately**, PR blocked |
-| **High** | Serious vulnerability, likely exploitable | **Fix before merge**, PR blocked |
+| **Critical** | Immediate threat, exploitable | **Fix immediately** |
+| **High** | Serious vulnerability, likely exploitable | **Fix before deployment** |
 | **Medium** | Moderate risk | Review and fix when possible |
 | **Low** | Minor risk | Review for awareness |
 
@@ -157,11 +125,11 @@ snyk container test starbunk-bunkbot:local --severity-threshold=high
 
 ### 1. Identify Vulnerabilities
 
-When a PR fails security gates:
+When a security scan shows vulnerabilities:
 
 ```
 ❌ Snyk found High or Critical vulnerabilities
-Please review and fix the vulnerabilities before merging
+Please review and fix the vulnerabilities
 Run 'snyk test' locally to see detailed results
 ```
 
@@ -219,7 +187,7 @@ FROM node:20.x-alpine  # Use latest patch version
 snyk test --all-projects --severity-threshold=high
 
 # Rescan containers
-docker build -f src/<app>/Dockerfile.ci -t starbunk-<app>:test .
+docker build -f src/<app>/Dockerfile -t starbunk-<app>:test .
 snyk container test starbunk-<app>:test --severity-threshold=high
 ```
 
@@ -230,8 +198,6 @@ git add package-lock.json  # or Dockerfile changes
 git commit -m "fix: resolve security vulnerabilities"
 git push
 ```
-
-The PR will automatically re-run security scans.
 
 ## 🏗️ Infrastructure-Specific Considerations
 

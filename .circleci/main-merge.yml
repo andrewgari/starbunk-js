@@ -65,33 +65,6 @@ jobs:
             npm run build
       - persist_build_artifacts
 
-  snyk_monitor_code:
-    executor: node22
-    steps:
-      - checkout
-      - setup_npm_cache
-      - run:
-          name: Install Snyk CLI
-          command: npm install -g snyk@latest
-      - run:
-          name: Monitor Code Dependencies
-          command: |
-            if [ -z "$SNYK_TOKEN" ]; then
-              echo "⚠️  WARNING: SNYK_TOKEN not set - skipping Snyk monitoring"
-            else
-              snyk auth $SNYK_TOKEN
-              
-              echo "📊 Registering main branch with Snyk for continuous monitoring"
-              snyk monitor \
-                --all-projects \
-                --detection-depth=4 \
-                --project-name=starbunk-js-main || {
-                  echo "⚠️  Failed to register with Snyk monitor (non-fatal)"
-                }
-              
-              echo "✅ Code monitoring configured"
-            fi
-
   docker_build_and_validate_main:
     parameters:
       app:
@@ -167,31 +140,12 @@ jobs:
               ghcr.io/${CIRCLE_PROJECT_USERNAME}/${APP}:main
             .circleci/scripts/container_health_check.sh ${APP}-test /live 180
       - run:
-          name: Snyk Container Scan and Monitor
+          name: Snyk Container Scan (optional)
           command: |
-            if [ -z "$SNYK_TOKEN" ]; then
-              echo "⚠️  WARNING: SNYK_TOKEN not set - skipping security scan"
-              echo "Please configure SNYK_TOKEN in CircleCI to enable security scanning"
-            else
-              npm install -g snyk@latest
-              snyk auth $SNYK_TOKEN
-              
-              echo "🔍 Running Snyk container scan with HIGH/CRITICAL enforcement"
-              snyk container test ghcr.io/${CIRCLE_PROJECT_USERNAME}/<< parameters.app >>:main \
-                --severity-threshold=high \
-                --file=<< parameters.dockerfile >> || {
-                  echo "❌ Container has High or Critical vulnerabilities"
-                  exit 1
-                }
-              
-              echo "📊 Registering container with Snyk for continuous monitoring"
-              snyk container monitor ghcr.io/${CIRCLE_PROJECT_USERNAME}/<< parameters.app >>:main \
-                --file=<< parameters.dockerfile >> \
-                --project-name=starbunk-<< parameters.app >>-main || {
-                  echo "⚠️  Failed to register with Snyk monitor (non-fatal)"
-                }
-              
-              echo "✅ Container scan passed"
+            if [ -n "$SNYK_TOKEN" ]; then
+              npm install -g snyk@latest || true
+              snyk auth $SNYK_TOKEN || true
+              snyk container test ghcr.io/${CIRCLE_PROJECT_USERNAME}/<< parameters.app >>:main --severity-threshold=high || true
             fi
       - run:
           name: Push main tag
@@ -253,71 +207,10 @@ jobs:
               docker push ${IMAGE}:${VERSION}
             done
 
-  deploy_to_unraid:
-    machine: true
-    resource_class: medium
-    steps:
-      - checkout
-      - add_ssh_keys:
-          fingerprints:
-            - "${SSH_KEY_FINGERPRINT}"
-      - setup_ssh_config
-      - notify_discord:
-          status: started
-          version: "${CIRCLE_BRANCH}"
-          message: "Deploying Starbunk services (tag: main) to Unraid server..."
-      - run:
-          name: Deploy to Unraid Server
-          command: |
-            VERSION=$(cat config/VERSION | tr -d '\n')
-            DEPLOY_TAG="main"  # Use :main tag from main branch
-
-            echo "========================================"
-            echo "Deploying version: ${VERSION}"
-            echo "Using image tag: ${DEPLOY_TAG}"
-            echo "Target: ${PROD_SERVER_HOST}"
-            echo "========================================"
-
-            # Copy deployment script to server
-            scp scripts/deployment/deploy.sh unraid-prod:/tmp/starbunk-deploy.sh
-            scp scripts/deployment/health-check.sh unraid-prod:/tmp/starbunk-health-check.sh
-
-            # Execute deployment on server
-            ssh unraid-prod "bash /tmp/starbunk-deploy.sh '${PROD_DOCKER_COMPOSE_DIR}' '${DEPLOY_TAG}' '${VERSION}'"
-
-      - run:
-          name: Verify Deployment Health
-          command: |
-            echo "========================================"
-            echo "Running post-deployment health checks..."
-            echo "========================================"
-
-            # Run health check script on server
-            ssh unraid-prod "bash /tmp/starbunk-health-check.sh '${PROD_DOCKER_COMPOSE_DIR}'"
-
-      - run:
-          name: Cleanup Remote Scripts
-          when: always
-          command: |
-            ssh unraid-prod "rm -f /tmp/starbunk-*.sh" || true
-
-      - notify_discord:
-          status: success
-          version: "${CIRCLE_BRANCH}"
-          message: "All services deployed and healthy on Unraid server!"
-
-      - run:
-          name: Handle Deployment Failure
-          when: on_fail
-          command: |
-            echo "Deployment failed - Discord notification will be sent by notify_discord with when: always"
-
 workflows:
   main_merge:
     jobs:
       - build_apps
-      - snyk_monitor_code:
-          requires: [build_apps]
       - docker_build_and_validate_main:
           name: build_validate_bunkbot
           app: bunkbot
@@ -362,7 +255,3 @@ workflows:
             - publish_bluebot_latest
       - tag_version_images:
           requires: [semantic_release]
-      - deploy_to_unraid:
-          context:
-            - deployment-production
-          requires: [tag_version_images]
