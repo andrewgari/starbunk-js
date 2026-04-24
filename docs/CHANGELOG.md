@@ -1,3 +1,15 @@
+## [1.38.6](https://github.com/andrewgari/starbunk-js/compare/v1.38.5...v1.38.6) (2026-04-24)
+
+### Bug Fixes
+
+* **ci:** pull-based deploy via Watchtower (no SSH, no Portainer) ([#672](https://github.com/andrewgari/starbunk-js/issues/672)) ([f2f4266](https://github.com/andrewgari/starbunk-js/commit/f2f4266585e99a4b2d9b35731575c05711fc5a31))
+
+## [1.38.5](https://github.com/andrewgari/starbunk-js/compare/v1.38.4...v1.38.5) (2026-04-24)
+
+### Bug Fixes
+
+* **covabot:** add better-sqlite3 as runtime dependency in shared package ([b101a0f](https://github.com/andrewgari/starbunk-js/commit/b101a0f0b599635a28d87d2b6241940adfd7c237))
+
 ## [1.38.4](https://github.com/andrewgari/starbunk-js/compare/v1.38.3...v1.38.4) (2026-04-24)
 
 ### Bug Fixes
