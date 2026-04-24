@@ -18,17 +18,16 @@ jobs:
       - name: Set short SHA
         run: echo "SHORT_SHA=${GITHUB_SHA:0:7}" >> $GITHUB_ENV
 
-      - name: Notify Discord — build started
-        if: vars.DISCORD_WEBHOOK_URL != ''
-        uses: rjstone/discord-webhook-notify@v1
+      - name: Notify — build started
+        if: secrets.DISCORD_NOTIFY_TOKEN != '' && vars.DISCORD_NOTIFY_USER_ID != ''
+        uses: ./.github/actions/discord-dm
         with:
-          severity: info
-          text: "**CD Pipeline started**"
-          details: >
-            🔨 Building `${{ github.event.head_commit.message }}`
-            by **${{ github.actor }}** (`${{ env.SHORT_SHA }}`)
-            — [View run](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})
-          webhookUrl: ${{ vars.DISCORD_WEBHOOK_URL }}
+          bot_token: ${{ secrets.DISCORD_NOTIFY_TOKEN }}
+          user_id: ${{ vars.DISCORD_NOTIFY_USER_ID }}
+          message: |
+            🔨 **Build started** (`${{ env.SHORT_SHA }}`)
+            > ${{ github.event.head_commit.message }}
+            Triggered by **${{ github.actor }}** — [View run](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})
 
       - name: Setup Node
         uses: actions/setup-node@v6
@@ -117,33 +116,34 @@ jobs:
     name: Notify Images Published
     runs-on: ubuntu-latest
     needs: docker_publish
-    if: always() && vars.DISCORD_WEBHOOK_URL != ''
+    if: always() && secrets.DISCORD_NOTIFY_TOKEN != '' && vars.DISCORD_NOTIFY_USER_ID != ''
     steps:
+      - uses: actions/checkout@v6
+
       - name: Set short SHA
         run: echo "SHORT_SHA=${GITHUB_SHA:0:7}" >> $GITHUB_ENV
 
-      - name: Notify Discord — images published
+      - name: Notify — images published
         if: needs.docker_publish.result == 'success'
-        uses: rjstone/discord-webhook-notify@v1
+        uses: ./.github/actions/discord-dm
         with:
-          severity: info
-          text: "**Docker images ready**"
-          details: >
-            🐳 All 4 images (bunkbot, covabot, djcova, bluebot) pushed to GHCR
-            as `:main` and `:sha-${{ env.SHORT_SHA }}`
+          bot_token: ${{ secrets.DISCORD_NOTIFY_TOKEN }}
+          user_id: ${{ vars.DISCORD_NOTIFY_USER_ID }}
+          message: |
+            🐳 **Docker images published** (`${{ env.SHORT_SHA }}`)
+            All 4 images (bunkbot, covabot, djcova, bluebot) pushed to GHCR as `:main` and `:sha-${{ env.SHORT_SHA }}`
             — [View run](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})
-          webhookUrl: ${{ vars.DISCORD_WEBHOOK_URL }}
 
-      - name: Notify Discord — images failed
+      - name: Notify — images failed
         if: needs.docker_publish.result == 'failure'
-        uses: rjstone/discord-webhook-notify@v1
+        uses: ./.github/actions/discord-dm
         with:
-          severity: error
-          text: "**Docker publish FAILED**"
-          details: >
-            ❌ One or more Docker images failed to publish.
+          bot_token: ${{ secrets.DISCORD_NOTIFY_TOKEN }}
+          user_id: ${{ vars.DISCORD_NOTIFY_USER_ID }}
+          message: |
+            ❌ **Docker publish FAILED** (`${{ env.SHORT_SHA }}`)
+            One or more images failed to build or push.
             — [View run](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})
-          webhookUrl: ${{ vars.DISCORD_WEBHOOK_URL }}
 
   e2e_tests:
     name: E2E Tests
@@ -226,27 +226,26 @@ jobs:
         if: always()
         run: docker compose -f docker-compose.e2e.yml down -v
 
-      - name: Notify Discord — E2E passed
-        if: success() && vars.DISCORD_WEBHOOK_URL != ''
-        uses: rjstone/discord-webhook-notify@v1
+      - name: Notify — E2E passed
+        if: success() && secrets.DISCORD_NOTIFY_TOKEN != '' && vars.DISCORD_NOTIFY_USER_ID != ''
+        uses: ./.github/actions/discord-dm
         with:
-          severity: info
-          text: "**E2E tests passed**"
-          details: >
-            ✅ All end-to-end tests passed against the `:main` images.
+          bot_token: ${{ secrets.DISCORD_NOTIFY_TOKEN }}
+          user_id: ${{ vars.DISCORD_NOTIFY_USER_ID }}
+          message: |
+            ✅ **E2E tests passed**
+            All end-to-end tests passed against the `:main` images.
             — [View run](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})
-          webhookUrl: ${{ vars.DISCORD_WEBHOOK_URL }}
 
-      - name: Notify Discord — E2E failed
-        if: failure() && vars.DISCORD_WEBHOOK_URL != ''
-        uses: rjstone/discord-webhook-notify@v1
+      - name: Notify — E2E failed
+        if: failure() && secrets.DISCORD_NOTIFY_TOKEN != '' && vars.DISCORD_NOTIFY_USER_ID != ''
+        uses: ./.github/actions/discord-dm
         with:
-          severity: error
-          text: "**E2E tests FAILED**"
-          details: >
-            ❌ End-to-end tests failed — deploy is blocked.
+          bot_token: ${{ secrets.DISCORD_NOTIFY_TOKEN }}
+          user_id: ${{ vars.DISCORD_NOTIFY_USER_ID }}
+          message: |
+            ❌ **E2E tests FAILED** — deploy is blocked
             — [View run](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})
-          webhookUrl: ${{ vars.DISCORD_WEBHOOK_URL }}
 
   publish_releases:
     name: Publish Releases
@@ -321,26 +320,24 @@ jobs:
           echo "tag=$BUILD_TAG" >> $GITHUB_OUTPUT
           echo "No semantic release — created build tag: ${BUILD_TAG}"
 
-      - name: Notify Discord — new version released
-        if: steps.semrel.outputs.new_version != '' && vars.DISCORD_WEBHOOK_URL != ''
-        uses: rjstone/discord-webhook-notify@v1
+      - name: Notify — new version released
+        if: steps.semrel.outputs.new_version != '' && secrets.DISCORD_NOTIFY_TOKEN != '' && vars.DISCORD_NOTIFY_USER_ID != ''
+        uses: ./.github/actions/discord-dm
         with:
-          severity: info
-          text: "**New release published**"
-          details: >
-            🚀 Version **v${{ steps.semrel.outputs.new_version }}** released and images tagged.
-            Watchtower will deploy within 5 minutes.
+          bot_token: ${{ secrets.DISCORD_NOTIFY_TOKEN }}
+          user_id: ${{ vars.DISCORD_NOTIFY_USER_ID }}
+          message: |
+            🚀 **v${{ steps.semrel.outputs.new_version }} released**
+            Images tagged and pushed. Watchtower will deploy within 5 minutes.
             — [View release](${{ github.server_url }}/${{ github.repository }}/releases/tag/v${{ steps.semrel.outputs.new_version }})
-          webhookUrl: ${{ vars.DISCORD_WEBHOOK_URL }}
 
-      - name: Notify Discord — build tagged
-        if: steps.semrel.outputs.new_version == '' && vars.DISCORD_WEBHOOK_URL != ''
-        uses: rjstone/discord-webhook-notify@v1
+      - name: Notify — build tagged
+        if: steps.semrel.outputs.new_version == '' && secrets.DISCORD_NOTIFY_TOKEN != '' && vars.DISCORD_NOTIFY_USER_ID != ''
+        uses: ./.github/actions/discord-dm
         with:
-          severity: info
-          text: "**Build tagged (no version bump)**"
-          details: >
-            🏷️ No version bump — build tag `${{ steps.build_tag.outputs.tag }}` created.
-            Watchtower will deploy the `:latest` images within 5 minutes.
+          bot_token: ${{ secrets.DISCORD_NOTIFY_TOKEN }}
+          user_id: ${{ vars.DISCORD_NOTIFY_USER_ID }}
+          message: |
+            🏷️ **Build tagged** (`${{ steps.build_tag.outputs.tag }}`)
+            No version bump. Watchtower will deploy `:latest` within 5 minutes.
             — [View run](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})
-          webhookUrl: ${{ vars.DISCORD_WEBHOOK_URL }}
