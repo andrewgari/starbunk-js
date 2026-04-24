@@ -49,7 +49,7 @@ jobs:
           echo "All images verified. Watchtower will pull and redeploy within 5 minutes."
 
       - name: Notify — deploy queued
-        if: success() && secrets.DISCORD_NOTIFY_TOKEN != '' && vars.DISCORD_NOTIFY_USER_ID != ''
+        if: success() && vars.DISCORD_NOTIFY_USER_ID != ''
         uses: ./.github/actions/discord-dm
         with:
           bot_token: ${{ secrets.DISCORD_NOTIFY_TOKEN }}
@@ -59,7 +59,7 @@ jobs:
             All images verified in GHCR. Watchtower will pull and restart containers within **5 minutes**.
 
       - name: Notify — verification failed
-        if: failure() && secrets.DISCORD_NOTIFY_TOKEN != '' && vars.DISCORD_NOTIFY_USER_ID != ''
+        if: failure() && vars.DISCORD_NOTIFY_USER_ID != ''
         uses: ./.github/actions/discord-dm
         with:
           bot_token: ${{ secrets.DISCORD_NOTIFY_TOKEN }}
