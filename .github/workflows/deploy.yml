@@ -34,10 +34,3 @@ jobs:
       - name: Deploy
         run: docker compose --env-file "$COMPOSE_ENV_FILE" up -d --remove-orphans
 
-      - name: Notify Discord Deployment
-        uses: rjstone/discord-webhook-notify@v1
-        if: always()
-        with:
-          severity: ${{ job.status == 'success' && 'info' || 'error' }}
-          details: Production deployment finished with status ${{ job.status }}
-          webhookUrl: ${{ secrets.DISCORD_WEBHOOK_URL }}
