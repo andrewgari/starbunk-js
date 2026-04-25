@@ -1,5 +1,12 @@
 // Shared utilities and services for all containers
 
+// Error codes and utilities
+export { SharedErrorCode } from './errors/codes';
+export type { SharedErrorCodeType } from './errors';
+export { ensureError } from './errors/ensure-error';
+export { logError } from './errors/log-error';
+export type { LogErrorOptions } from './errors/log-error';
+
 // Core logger
 export { logLayer } from './observability/log-layer';
 
@@ -21,6 +28,13 @@ export type {
   BotContext,
   IBotContextMixin,
 } from './observability/mixins';
+
+// Health and smoke testing
+export { runSmokeMode } from './health/smoke-mode';
+export { initializeHealthServer } from './health/health-server-init';
+export type { HealthCheckModule } from './observability/health-server';
+export { setApplicationHealth, registerHealthCheckModule } from './observability/health-server';
+export { shutdownObservability } from './observability/shutdown';
 
 // Types
 export type { BotIdentity } from './types/bot-identity';
@@ -53,7 +67,6 @@ export type {
 } from './services/llm';
 export { LlmProviderManager } from './services/llm/llm-provider-manager';
 export { OpenAIProvider } from './services/llm/openai-provider';
-export { GeminiProvider } from './services/llm/gemini-provider';
 export { OllamaProvider } from './services/llm/ollama-provider';
 
 // Ollama model management
@@ -66,3 +79,9 @@ export { PostgresBaseRepository } from './data-access/base/postgres-base-reposit
 // Reactive utilities
 export { LiveData } from './utils/live-data';
 export type { ReadonlyLiveData, SubscribeOptions, Unsubscribe } from './utils/live-data';
+
+// Strategies
+export { BotStrategy } from './strategy/bot-strategy';
+export type { IBotStrategy } from './strategy/bot-strategy';
+export { SendWebhookMessageStrategy } from './strategy/send-webhook-message-strategy';
+export { SendAPIMessageStrategy } from './strategy/send-api-message-strategy';

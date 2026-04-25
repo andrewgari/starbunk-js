@@ -56,6 +56,7 @@ function createMessage(
     channelId: cfg.channelId!,
     author: { id: cfg.authorId!, username: cfg.authorUsername!, bot: false } as User,
     guild: cfg.guildId ? ({ id: cfg.guildId } as Guild) : null,
+    mentions: { users: { has: (_: string) => false } },
   } as unknown as Message;
 }
 
@@ -103,55 +104,23 @@ describe('MessageHandler', () => {
         systemPrompt: 'You are Test.',
         traits: [],
         interests: [],
+        topicAffinities: [],
+        backgroundFacts: [],
         speechPatterns: { lowercase: true, sarcasmLevel: 0.1, technicalBias: 0.1 },
       },
-      triggers: [],
+      nameAliases: [],
       socialBattery: { maxMessages: 5, windowMinutes: 10, cooldownSeconds: 30 },
+      memory: { channelWindow: 8 },
       llmConfig: { model: 'fake', temperature: 0.2, max_tokens: 64 },
       ignoreBots: true,
     };
     profiles = new Map([[profile.id, profile]]);
   });
 
-  it('sends pattern response and records memory + battery', async () => {
+  it('uses LLM and records memory', async () => {
     decisionService.shouldRespond.mockResolvedValue({
       shouldRespond: true,
-      reason: 'pattern_trigger',
-      useLlm: false,
-      patternResponse: 'Hi there!',
-      triggerName: 'greeting',
-    });
-
-    const handler = new MessageHandler(
-      profiles,
-      memoryService,
-      decisionService,
-      llmService,
-      personalityService,
-      socialBatteryService,
-    );
-
-    const msg = createMessage({ content: 'hello there' });
-    await handler.handleMessage(msg);
-
-    expect(mockSendMessageWithBotIdentity).toHaveBeenCalled();
-    expect(memoryService.storeConversation).toHaveBeenCalledWith(
-      profile.id,
-      msg.channelId,
-      msg.author.id,
-      msg.author.username,
-      msg.content,
-      'Hi there!',
-    );
-    expect(socialBatteryService.recordMessage).toHaveBeenCalled();
-    expect(personalityService.analyzeForEvolution).toHaveBeenCalled();
-  });
-
-  it('uses LLM when required and records memory', async () => {
-    decisionService.shouldRespond.mockResolvedValue({
-      shouldRespond: true,
-      reason: 'pattern_trigger',
-      useLlm: true,
+      reason: 'llm_response',
     });
     llmService.generateResponse.mockResolvedValue({
       content: 'sure, how can i help?',
@@ -187,7 +156,6 @@ describe('MessageHandler', () => {
     decisionService.shouldRespond.mockResolvedValueOnce({
       shouldRespond: true,
       reason: 'llm_response',
-      useLlm: true,
     });
     llmService.generateResponse.mockResolvedValueOnce({
       content: '',

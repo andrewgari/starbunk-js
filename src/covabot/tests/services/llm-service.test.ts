@@ -35,15 +35,18 @@ vi.mock('@starbunk/shared', () => {
 const baseProfile: CovaProfile = {
   id: 'p1',
   displayName: 'Bot',
+  nameAliases: ['bot'],
   identity: { type: 'static', botName: 'Bot' },
   personality: {
     systemPrompt: 'You are helpful.',
     traits: ['friendly'],
     interests: ['testing', 'typescript'],
+    topicAffinities: ['testing', 'typescript'],
+    backgroundFacts: [],
     speechPatterns: { lowercase: true, sarcasmLevel: 0.5, technicalBias: 0.5 },
   },
-  triggers: [],
   socialBattery: { maxMessages: 3, windowMinutes: 10, cooldownSeconds: 5 },
+  memory: { channelWindow: 8 },
   llmConfig: { model: 'test-model', temperature: 0.3, max_tokens: 128 },
   ignoreBots: true,
 };
@@ -53,6 +56,14 @@ const baseContext: LlmContext = {
   conversationHistory: 'Alice: hi\nBot: hello',
   userFacts: "Alice's interests: hobby: coding",
   traitModifiers: 'Be concise.',
+  engagementContext: {
+    wasMentioned: false,
+    nameReferenced: false,
+    isDirectExchange: false,
+    activeParticipants: ['Alice'],
+    secondsSinceLastResponse: 120,
+    conversationMessageCount: 2,
+  },
 };
 
 describe('LlmService', () => {

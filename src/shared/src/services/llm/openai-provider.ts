@@ -1,7 +1,9 @@
 /**
- * OpenAI LLM Provider
+ * OpenAI LLM Provider — cloud fallback for when Ollama is unavailable.
  *
- * OpenAI provider as a fallback option.
+ * Wraps the official OpenAI SDK. The client is only instantiated when an API
+ * key is present, so this provider is a no-op (isAvailable() = false) in
+ * environments without CLOUD_LLM_API_KEY configured.
  */
 
 import { logLayer } from '../../observability/log-layer';
@@ -16,9 +18,9 @@ export class OpenAIProvider implements LlmProvider {
   private readonly defaultModel: string;
 
   constructor(apiKey?: string, defaultModel?: string) {
-    const key = apiKey || process.env.OPENAI_API_KEY;
+    const key = apiKey || process.env.CLOUD_LLM_API_KEY;
     this.client = key ? new OpenAI({ apiKey: key }) : null;
-    this.defaultModel = defaultModel || process.env.OPENAI_DEFAULT_MODEL || 'gpt-4o-mini';
+    this.defaultModel = defaultModel || process.env.CLOUD_LLM_DEFAULT_MODEL || 'gpt-4o-mini';
   }
 
   isAvailable(): boolean {
@@ -33,7 +35,14 @@ export class OpenAIProvider implements LlmProvider {
       throw new Error('OpenAI API key not configured');
     }
 
-    const model = options.model || this.defaultModel;
+    const requestedModel = options.model;
+    const model =
+      requestedModel &&
+      (requestedModel.startsWith('gpt-') ||
+        requestedModel.startsWith('o1') ||
+        requestedModel.startsWith('o3'))
+        ? requestedModel
+        : this.defaultModel;
 
     logger
       .withMetadata({ model, messageCount: messages.length })

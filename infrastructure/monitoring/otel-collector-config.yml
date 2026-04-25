@@ -33,11 +33,12 @@ processors:
         value: ${env:ENVIRONMENT}
         action: upsert
 
+
 exporters:
   # Prometheus exporter (for metrics)
   # Exposes metrics in Prometheus format for scraping
   prometheus:
-    endpoint: "0.0.0.0:8889"
+    endpoint: '0.0.0.0:8889'
     namespace: starbunk
     const_labels:
       cluster: starbunk-discord-bots
@@ -73,7 +74,7 @@ service:
     traces:
       receivers: [otlp]
       processors: [memory_limiter, batch, resource]
-      exporters: [otlp/tempo, logging]  # Export to Tempo and console
+      exporters: [otlp/tempo, logging] # Export to Tempo and console
 
     # Metrics pipeline
     metrics:
@@ -94,4 +95,3 @@ service:
     metrics:
       level: detailed
       address: 0.0.0.0:8888
-

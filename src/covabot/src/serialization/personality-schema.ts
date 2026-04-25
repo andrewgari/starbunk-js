@@ -35,71 +35,37 @@ export const speechPatternsSchema = z.object({
     .describe('Technical language tendency 0.0-1.0'),
 });
 
+// Memory configuration
+export const memoryConfigSchema = z.object({
+  channel_window: z
+    .number()
+    .int()
+    .positive()
+    .default(8)
+    .describe('Number of recent messages to include as conversation context'),
+});
+
 // Personality configuration
 export const personalitySchema = z.object({
-  system_prompt: z.string().describe('Core persona instructions for LLM'),
-  traits: z.array(z.string()).default([]).describe('Personality trait descriptors'),
-  interests: z.array(z.string()).default([]).describe('Topics the bot is interested in'),
+  system_prompt: z
+    .string()
+    .optional()
+    .describe('Core persona instructions for LLM (overridden by markdown files if present)'),
+  traits: z.array(z.string()).default([]).describe('Personality trait descriptors (voice/tone)'),
+  interests: z.array(z.string()).default([]).describe('[Deprecated] Use topic_affinities instead'),
+  topic_affinities: z
+    .array(z.string())
+    .default([])
+    .describe('Topics that draw engagement — not talking points to broadcast'),
+  background_facts: z
+    .array(z.string())
+    .default([])
+    .describe('Personal background details — mentioned rarely and only when naturally relevant'),
   speech_patterns: speechPatternsSchema.default({
     lowercase: false,
     sarcasm_level: 0.3,
     technical_bias: 0.5,
   }),
-});
-
-// Trigger condition (recursive)
-export type ConditionConfig = {
-  matches_pattern?: string;
-  contains_word?: string;
-  contains_phrase?: string;
-  from_user?: string;
-  with_chance?: number;
-  any_of?: ConditionConfig[];
-  all_of?: ConditionConfig[];
-  none_of?: ConditionConfig[];
-  always?: boolean;
-};
-
-export const conditionSchema: z.ZodType<ConditionConfig> = z.lazy(() =>
-  z
-    .object({
-      matches_pattern: z.string().optional(),
-      contains_word: z.string().optional(),
-      contains_phrase: z.string().optional(),
-      from_user: z.string().optional(),
-      with_chance: z.number().min(0).max(1).optional(),
-      any_of: z.array(conditionSchema).optional(),
-      all_of: z.array(conditionSchema).optional(),
-      none_of: z.array(conditionSchema).optional(),
-      always: z.boolean().optional(),
-    })
-    .refine(
-      val => {
-        // At least one condition type must be specified
-        const keys = Object.keys(val).filter(
-          k => (val as Record<string, unknown>)[k] !== undefined,
-        );
-        return keys.length > 0;
-      },
-      { message: 'At least one condition type must be specified' },
-    ),
-);
-
-// Trigger configuration
-export const triggerSchema = z.object({
-  name: z.string().describe('Internal identifier for this trigger'),
-  conditions: conditionSchema.describe('Conditions that activate this trigger'),
-  use_llm: z.boolean().default(true).describe('Whether to use LLM for response generation'),
-  response_chance: z
-    .number()
-    .min(0)
-    .max(1)
-    .optional()
-    .describe('Probability of responding when matched'),
-  responses: z
-    .union([z.string(), z.array(z.string())])
-    .optional()
-    .describe('Canned responses (if use_llm is false)'),
 });
 
 // Social battery configuration
@@ -126,9 +92,12 @@ export const profileSchema = z.object({
   id: z.string().describe('Unique internal identifier'),
   display_name: z.string().describe('Display name for Discord'),
   avatar_url: z.string().url().optional().describe('Avatar URL for webhook'),
+  name_aliases: z
+    .array(z.string())
+    .default([])
+    .describe('Names and aliases the bot goes by — used as context signals for the LLM'),
   identity: identitySchema,
   personality: personalitySchema,
-  triggers: z.array(triggerSchema).min(1, 'At least one trigger is required'),
   social_battery: socialBatterySchema.default({
     max_messages: 5,
     window_minutes: 10,
@@ -139,6 +108,7 @@ export const profileSchema = z.object({
     temperature: 0.4,
     max_tokens: 256,
   }),
+  memory: memoryConfigSchema.default({ channel_window: 8 }),
   ignore_bots: z.boolean().default(true).describe('Whether to ignore messages from other bots'),
 });
 
@@ -148,11 +118,10 @@ export const yamlConfigSchema = z.object({
 });
 
 // Type exports
+export type MemoryConfigType = z.infer<typeof memoryConfigSchema>;
 export type IdentityConfig = z.infer<typeof identitySchema>;
 export type SpeechPatternsConfig = z.infer<typeof speechPatternsSchema>;
 export type PersonalitySchemaType = z.infer<typeof personalitySchema>;
-// ConditionConfig is declared above to allow precise recursive typing
-export type TriggerSchemaType = z.infer<typeof triggerSchema>;
 export type SocialBatterySchemaType = z.infer<typeof socialBatterySchema>;
 export type LlmSchemaType = z.infer<typeof llmConfigSchema>;
 export type ProfileSchemaType = z.infer<typeof profileSchema>;

@@ -1,4 +1,4 @@
-import { vi } from 'vitest';
+import { vi, expect } from 'vitest';
 import { createMockMessage, MockMessageOptions } from './mock-message';
 import { Message, TextChannel, Client } from 'discord.js';
 import { BlueBotDiscordService } from '../../src/discord/discord-service';
@@ -28,7 +28,7 @@ export function setupMessageWithSpy(content: string, options?: Partial<MockMessa
  * @param options - Additional options for creating the mock message
  */
 export async function expectShouldRespond(
-  strategy: { shouldRespond: (message: Message) => Promise<boolean> },
+  strategy: { shouldTrigger: (message?: Message) => Promise<boolean> },
   content: string,
   expected: boolean,
   options?: Partial<MockMessageOptions>,
@@ -37,7 +37,7 @@ export async function expectShouldRespond(
     content,
     ...options,
   });
-  const result = await strategy.shouldRespond(message as Message);
+  const result = await strategy.shouldTrigger(message as Message);
   return expect(result).toBe(expected);
 }
 
@@ -46,7 +46,7 @@ export async function expectShouldRespond(
  * Convenience wrapper around expectShouldRespond with expected=false
  */
 export async function expectShouldNotRespond(
-  strategy: { shouldRespond: (message: Message) => Promise<boolean> },
+  strategy: { shouldTrigger: (message?: Message) => Promise<boolean> },
   content: string,
   options?: Partial<MockMessageOptions>,
 ) {
@@ -61,7 +61,7 @@ export async function expectShouldNotRespond(
  * @param options - Additional options for creating mock messages
  */
 export async function testMultipleCases(
-  strategy: { shouldRespond: (message: Message) => Promise<boolean> },
+  strategy: { shouldTrigger: (message?: Message) => Promise<boolean> },
   testCases: string[],
   expected: boolean,
   options?: Partial<MockMessageOptions>,
@@ -105,11 +105,11 @@ export function setupDiscordService(message: Partial<Message>) {
  * @param expectedResponse - The expected response (string or regex)
  */
 export async function expectResponse(
-  strategy: { getResponse: (message: Message) => Promise<string> },
-  message: Message,
+  strategy: { getResponse: () => Promise<string> },
+  _message: Message,
   expectedResponse: string | RegExp,
 ) {
-  const response = await strategy.getResponse(message);
+  const response = await strategy.getResponse();
   if (typeof expectedResponse === 'string') {
     return expect(response).toBe(expectedResponse);
   } else {
@@ -124,10 +124,10 @@ export async function expectResponse(
  * @param expectedSubstring - The expected substring
  */
 export async function expectResponseContains(
-  strategy: { getResponse: (message: Message) => Promise<string> },
-  message: Message,
+  strategy: { getResponse: () => Promise<string> },
+  _message: Message,
   expectedSubstring: string,
 ) {
-  const response = await strategy.getResponse(message);
+  const response = await strategy.getResponse();
   return expect(response).toContain(expectedSubstring);
 }

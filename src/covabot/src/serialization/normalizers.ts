@@ -1,17 +1,17 @@
-import type {
-  BotIdentityConfig,
-  LlmConfig,
-  SpeechPatterns,
-  TriggerCondition,
-  TriggerConfig,
-} from '@/models/memory-types';
-import type {
-  IdentityConfig,
-  LlmSchemaType,
-  SpeechPatternsConfig,
-  ConditionConfig,
-  TriggerSchemaType,
-} from './personality-schema';
+/**
+ * Normalization helpers used by personality-mapper.ts to convert Zod-parsed
+ * YAML config values into the runtime CovaProfile types.
+ *
+ * Each function handles a distinct sub-object:
+ * - normalizeSpeechPatterns: snake_case YAML → camelCase SpeechPatterns, with clamping
+ * - normalizeIdentity: Zod discriminated union → BotIdentityConfig
+ * - normalizeLlmConfig: raw LLM schema → LlmConfig with bounds enforcement
+ *
+ * clamp and clamp01 are general utilities exported for testing and ad-hoc use.
+ */
+
+import type { BotIdentityConfig, LlmConfig, SpeechPatterns } from '@/models/memory-types';
+import type { IdentityConfig, LlmSchemaType, SpeechPatternsConfig } from './personality-schema';
 
 export function clamp(n: number, min: number, max: number): number {
   if (Number.isNaN(n)) return min;
@@ -47,39 +47,6 @@ export function normalizeIdentity(id: IdentityConfig): BotIdentityConfig {
       // Exhaustiveness
       return { type: 'random' } as BotIdentityConfig;
   }
-}
-
-export function normalizeCondition(cond: ConditionConfig): TriggerCondition {
-  const out: TriggerCondition = {};
-  if (cond.matches_pattern !== undefined) out.matches_pattern = String(cond.matches_pattern);
-  if (cond.contains_word !== undefined) out.contains_word = String(cond.contains_word);
-  if (cond.contains_phrase !== undefined) out.contains_phrase = String(cond.contains_phrase);
-  if (cond.from_user !== undefined) out.from_user = String(cond.from_user);
-  if (cond.with_chance !== undefined) out.with_chance = clamp01(cond.with_chance);
-  if (cond.always !== undefined) out.always = Boolean(cond.always);
-
-  if (cond.any_of) out.any_of = cond.any_of.map(c => normalizeCondition(c));
-  if (cond.all_of) out.all_of = cond.all_of.map(c => normalizeCondition(c));
-  if (cond.none_of) out.none_of = cond.none_of.map(c => normalizeCondition(c));
-
-  return out;
-}
-
-export function normalizeTrigger(t: TriggerSchemaType): TriggerConfig {
-  const responses = t.responses;
-  const normalizedResponses = Array.isArray(responses)
-    ? responses.map(r => String(r))
-    : responses !== undefined
-      ? String(responses)
-      : undefined;
-
-  return {
-    name: t.name.trim(),
-    conditions: normalizeCondition(t.conditions),
-    use_llm: Boolean(t.use_llm),
-    response_chance: clamp01(t.response_chance),
-    responses: normalizedResponses,
-  };
 }
 
 export function normalizeLlmConfig(llm: LlmSchemaType): LlmConfig {

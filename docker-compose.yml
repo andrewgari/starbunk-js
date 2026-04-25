@@ -1,7 +1,7 @@
 version: "3.8"
 
 # Production deployment using pre-built images from GitHub Container Registry (GHCR)
-# Images are built by CI/CD pipeline and tagged as 'prod' for production releases
+# Images are built by CI/CD pipeline and tagged as 'main' for the latest production build
 # For local development with source builds, see src/{service}/docker-compose.dev.yml
 
 services:
@@ -12,13 +12,14 @@ services:
     restart: unless-stopped
     environment:
       # Core Discord Configuration
-      - DISCORD_TOKEN=${BUNKBOT_TOKEN}
+      - DISCORD_TOKEN=${BUNKBOT_TOKEN:-${STARBUNK_TOKEN}}
 
       # Storage Configuration
       # BUNKBOT_BOTS_DIR=/app/config  # Optional: defaults to /app/config
 
       # Observability Configuration
       - SERVICE_NAME=${BUNKBOT_SERVICE_NAME:-bunkbot}
+      - OTEL_SERVICE_NAME=${BUNKBOT_SERVICE_NAME:-bunkbot}
       - METRICS_PORT=${METRICS_PORT:-3000}
       - ENABLE_METRICS=${ENABLE_METRICS:-true}
       - ENABLE_STRUCTURED_LOGGING=${ENABLE_STRUCTURED_LOGGING:-true}
@@ -38,8 +39,12 @@ services:
       - DEBUG_MODE=${DEBUG_MODE:-false}
       - TESTING_SERVER_IDS=${TESTING_SERVER_IDS:-}
       - TESTING_CHANNEL_IDS=${TESTING_CHANNEL_IDS:-}
+
+      # Startup notifications
+      - DISCORD_NOTIFY_USER_ID=${DISCORD_NOTIFY_USER_ID:-}
     volumes:
       - ${HOST_WORKDIR}/config/bunkbot:/app/config:ro
+      - ${HOST_WORKDIR}/data/bunkbot:/app/data
     ports:
       - "${BUNKBOT_WEB_PORT:-7081}:7081"
     networks:
@@ -84,6 +89,7 @@ services:
 
       # Observability Configuration
       - SERVICE_NAME=${DJCOVA_SERVICE_NAME:-djcova}
+      - OTEL_SERVICE_NAME=${DJCOVA_SERVICE_NAME:-djcova}
       - METRICS_PORT=${METRICS_PORT:-3000}
       - ENABLE_METRICS=${ENABLE_METRICS:-true}
       - ENABLE_STRUCTURED_LOGGING=${ENABLE_STRUCTURED_LOGGING:-true}
@@ -102,10 +108,12 @@ services:
       - DEBUG_MODE=${DEBUG_MODE:-false}
       - TESTING_SERVER_IDS=${TESTING_SERVER_IDS:-}
       - TESTING_CHANNEL_IDS=${TESTING_CHANNEL_IDS:-}
+
+      # Startup notifications (data dir is /data for djcova, not /app/data)
+      - DISCORD_NOTIFY_USER_ID=${DISCORD_NOTIFY_USER_ID:-}
+      - STARTUP_DM_DATA_DIR=/data
     volumes:
-      # Configuration directory (read-only)
       - ${HOST_WORKDIR}/config/djcova:/app/config:ro
-      # Optional: Data directory path (default: ./data)
       - ${HOST_WORKDIR}/data/djcova:/data
     networks:
       - starbunk-network
@@ -149,32 +157,25 @@ services:
       - DISCORD_TOKEN=${COVABOT_TOKEN:-${STARBUNK_TOKEN}}
 
       # AI/LLM Configuration
-      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
-      - OPENAI_DEFAULT_MODEL=${OPENAI_DEFAULT_MODEL:-gpt-4o-mini}
+      # Set at least one of the following provider keys:
+      - OLLAMA_BASE_URL=${OLLAMA_BASE_URL:-}
+      - OLLAMA_DEFAULT_MODEL=${OLLAMA_DEFAULT_MODEL:-}
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
+      - ANTHROPIC_DEFAULT_MODEL=${ANTHROPIC_DEFAULT_MODEL:-}
       - GEMINI_API_KEY=${GEMINI_API_KEY:-}
-      - GEMINI_DEFAULT_MODEL=${GEMINI_DEFAULT_MODEL:-gemini-pro}
-      - OLLAMA_API_URL=${OLLAMA_API_URL:-}
-      - OLLAMA_DEFAULT_MODEL=${OLLAMA_DEFAULT_MODEL:-mistral:latest}
+      - GEMINI_DEFAULT_MODEL=${GEMINI_DEFAULT_MODEL:-}
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+      - OPENAI_DEFAULT_MODEL=${OPENAI_DEFAULT_MODEL:-}
       - OLLAMA_AUTO_PULL_MODELS=${OLLAMA_AUTO_PULL_MODELS:-true}
       - OLLAMA_PULL_ON_STARTUP=${OLLAMA_PULL_ON_STARTUP:-true}
       - OLLAMA_PULL_TIMEOUT_MS=${OLLAMA_PULL_TIMEOUT_MS:-1200000}
-
-      # Database Services - Redis (Social Battery)
-      - REDIS_HOST=${REDIS_HOST:-starbunk-redis}
-      - REDIS_PORT=${REDIS_PORT:-6379}
-      - REDIS_PASSWORD=${REDIS_PASSWORD:-}
-      - REDIS_DB=${REDIS_DB:-0}
 
       # Database Services - PostgreSQL (Conversation Memory)
       - POSTGRES_HOST=${POSTGRES_HOST:-starbunk-postgres}
       - POSTGRES_PORT=${POSTGRES_PORT:-5432}
       - POSTGRES_DB=${POSTGRES_DB:-starbunk}
       - POSTGRES_USER=${POSTGRES_USER:-starbunk}
-      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:?Error: POSTGRES_PASSWORD environment variable is required for security}
-
-      # Database Services - Qdrant (Saliency/Interest Matching)
-      - QDRANT_URL=${QDRANT_URL:-http://starbunk-qdrant:6333}
-      - QDRANT_API_KEY=${QDRANT_API_KEY:-}
+      - "POSTGRES_PASSWORD=${POSTGRES_PASSWORD:?Error: POSTGRES_PASSWORD environment variable is required for security}"
 
       # Storage Configuration
       - COVABOT_DATA_DIR=/app/data
@@ -182,8 +183,14 @@ services:
       - COVABOT_PERSONALITIES_PATH=${COVABOT_PERSONALITIES_PATH:-}
       - COVABOT_DATABASE_PATH=${COVABOT_DATABASE_PATH:-}
 
+      # Cache & Vector DB
+      - REDIS_URL=${REDIS_URL:-redis://starbunk-redis:6379}
+      - QDRANT_URL=${QDRANT_URL:-http://starbunk-qdrant:6333}
+      - QDRANT_API_KEY=${QDRANT_API_KEY:-}
+
       # Observability Configuration
       - SERVICE_NAME=${COVABOT_SERVICE_NAME:-covabot}
+      - OTEL_SERVICE_NAME=${COVABOT_SERVICE_NAME:-covabot}
       - METRICS_PORT=3000
       - ENABLE_METRICS=${ENABLE_METRICS:-true}
       - ENABLE_STRUCTURED_LOGGING=${ENABLE_STRUCTURED_LOGGING:-true}
@@ -203,20 +210,26 @@ services:
       - COVA_USER_ID=${COVA_USER_ID:-}
       - TESTING_SERVER_IDS=${TESTING_SERVER_IDS:-}
       - TESTING_CHANNEL_IDS=${TESTING_CHANNEL_IDS:-}
+
+      # Verbose decision logging (set to true to see why the bot speaks/stays silent at INFO level)
+      - COVABOT_VERBOSE=${COVABOT_VERBOSE:-false}
+      # Prompt-level logging (set to true to log raw LLM responses — very noisy)
+      - COVABOT_LOG_PROMPTS=${COVABOT_LOG_PROMPTS:-false}
+
+      # Startup notifications
+      - DISCORD_NOTIFY_USER_ID=${DISCORD_NOTIFY_USER_ID:-}
     volumes:
       - ${HOST_WORKDIR}/config/covabot:/app/config:ro
       - ${HOST_WORKDIR}/data/covabot:/app/data
     depends_on:
       - starbunk-postgres
       - starbunk-redis
+      - starbunk-qdrant
     ports:
-      # Optional: Web interface port (default: 7080)
       - "${COVABOT_WEB_PORT:-7080}:7080"
-      # No metrics port exposed - all observability via OTEL collector
     networks:
       - starbunk-network
     extra_hosts:
-      # Required for host.docker.internal to work on Linux
       - "host.docker.internal:host-gateway"
     logging:
       driver: "json-file"
@@ -258,6 +271,7 @@ services:
 
       # Observability Configuration
       - SERVICE_NAME=${BLUEBOT_SERVICE_NAME:-bluebot}
+      - OTEL_SERVICE_NAME=${BLUEBOT_SERVICE_NAME:-bluebot}
       - METRICS_PORT=3000
       - ENABLE_METRICS=${ENABLE_METRICS:-true}
       - ENABLE_STRUCTURED_LOGGING=${ENABLE_STRUCTURED_LOGGING:-true}
@@ -276,8 +290,10 @@ services:
       - DEBUG_MODE=${DEBUG_MODE:-false}
       - TESTING_SERVER_IDS=${TESTING_SERVER_IDS:-}
       - TESTING_CHANNEL_IDS=${TESTING_CHANNEL_IDS:-}
+
+      # Startup notifications
+      - DISCORD_NOTIFY_USER_ID=${DISCORD_NOTIFY_USER_ID:-}
     volumes:
-      # Configuration directory (read-only)
       - ${HOST_WORKDIR}/config/bluebot:/app/config:ro
       - ${HOST_WORKDIR}/data/bluebot:/app/data
     networks:
@@ -309,26 +325,20 @@ services:
       start_period: 60s
 
   # OpenTelemetry Collector - Unified telemetry pipeline
-  # Receives telemetry from bots via OTLP and pushes to remote observability stack
-  # Configure PROMETHEUS_HOST, LOKI_HOST, TEMPO_HOST to point to your Unraid/remote server
-  # Internal only - no ports exposed to host
   starbunk-otel-collector:
-    image: otel/opentelemetry-collector-contrib:latest
+    image: otel/opentelemetry-collector-contrib:0.102.1
     container_name: starbunk-exporter
     restart: unless-stopped
     command: ["--config=/etc/otel-collector-config.yml"]
     volumes:
       - ${HOST_WORKDIR}/infrastructure/monitoring/otel-collector-config.yml:/etc/otel-collector-config.yml:ro
-    # No ports exposed - internal access only
     expose:
-      - "14317" # OTLP gRPC receiver (internal only)
-      - "14318" # OTLP HTTP receiver (internal only)
-      - "8888" # Collector's own metrics (internal only)
-      - "8889" # Prometheus metrics exporter (internal only)
+      - "14317"
+      - "14318"
+      - "8888"
+      - "8889"
     environment:
-      # Environment & Logging
       - ENVIRONMENT=${ENVIRONMENT:-production}
-      # Remote observability stack endpoints (point to your Unraid server)
       - OBSERVABILITY_HOST=${OBSERVABILITY_HOST:-localhost}
       - PROMETHEUS_PORT=${PROMETHEUS_PORT:-9090}
       - LOKI_PORT=${LOKI_PORT:-3100}
@@ -344,7 +354,6 @@ services:
       - com.starbunk.service=otel-collector
       - prometheus.io/scrape=true
       - prometheus.io/path=/metrics
-      # Note: The collector's metrics are on port 8889, not on METRICS_PORT
       - prometheus.io/port=${OTEL_METRICS_PORT:-8889}
       - io.portainer.icon=https://opentelemetry.io/img/logos/opentelemetry-logo-nav.png
       - net.unraid.docker.icon=https://opentelemetry.io/img/logos/opentelemetry-logo-nav.png
@@ -355,26 +364,22 @@ services:
         reservations:
           memory: 256M
 
-  # ============================================================================
-  # Database Services
-  # ============================================================================
-  # These services are internal to the stack and not exposed to the host
-  # They provide data persistence for the bots
-
-  # PostgreSQL - Relational database
+  # PostgreSQL - Relational database (internal only)
   starbunk-postgres:
-    image: postgres:16-alpine
-    container_name: starbunk-db
+    image: pgvector/pgvector:pg16
+    container_name: starbunk-postgres
     restart: unless-stopped
     environment:
       - POSTGRES_USER=${POSTGRES_USER:-starbunk}
-      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-starbunk}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
       - POSTGRES_DB=${POSTGRES_DB:-starbunk}
       - PGDATA=/var/lib/postgresql/data/pgdata
     volumes:
       - ${HOST_WORKDIR}/data/postgres:/var/lib/postgresql/data
     networks:
-      - starbunk-network
+      starbunk-network:
+        aliases:
+          - starbunk-db  # backward-compat alias for deployments that still reference the old container name
     # No ports exposed - internal access only
     logging:
       driver: "json-file"
@@ -397,17 +402,12 @@ services:
       timeout: 5s
       retries: 5
 
-  # Redis - In-memory data store (for social battery, caching, etc.)
+  # Redis - Session cache and state management (internal only)
   starbunk-redis:
     image: redis:7-alpine
-    container_name: starbunk-cache
+    container_name: starbunk-redis
     restart: unless-stopped
-    command:
-      [
-        "sh",
-        "-c",
-        "redis-server ${REDIS_PASSWORD:+--requirepass $REDIS_PASSWORD} --maxmemory 256mb --maxmemory-policy allkeys-lru --save 60 1 --loglevel warning",
-      ]
+    command: sh -c "redis-server $${REDIS_PASSWORD:+--requirepass \"$$REDIS_PASSWORD\"} --maxmemory 256mb --maxmemory-policy allkeys-lru"
     volumes:
       - ${HOST_WORKDIR}/data/redis:/data
     networks:
@@ -425,23 +425,19 @@ services:
     deploy:
       resources:
         limits:
-          memory: 256M
+          memory: 384M
         reservations:
           memory: 128M
     healthcheck:
-      test:
-        [
-          "CMD-SHELL",
-          'if [ -z "${REDIS_PASSWORD:-}" ]; then redis-cli ping; else redis-cli -a "${REDIS_PASSWORD}" ping; fi',
-        ]
+      test: ["CMD-SHELL", "redis-cli ${REDIS_PASSWORD:+-a \"$REDIS_PASSWORD\"} ping | grep -q PONG"]
       interval: 10s
       timeout: 5s
       retries: 5
 
-  # Qdrant - Vector database (for saliency/interest matching)
+  # Qdrant - Vector database for semantic search (internal only)
   starbunk-qdrant:
-    image: qdrant/qdrant:latest
-    container_name: starbunk-vectordb
+    image: qdrant/qdrant:v1.7.4
+    container_name: starbunk-qdrant
     restart: unless-stopped
     environment:
       - QDRANT__SERVICE__API_KEY=${QDRANT_API_KEY:-}
@@ -465,23 +461,16 @@ services:
           memory: 512M
         reservations:
           memory: 256M
-    # Qdrant upstream image does not include curl/wget/nc inside the container,
-    # so an HTTP healthcheck cannot run from within. Mark as healthy to avoid
-    # perpetual 'unhealthy' status and rely on dependent services' retries.
     healthcheck:
-      test: ["CMD", "true"]
+      # v1.7.4 has no curl/wget — use bash TCP check
+      test: ["CMD-SHELL", "bash -c '</dev/tcp/localhost/6333' 2>/dev/null && exit 0 || exit 1"]
       interval: 10s
       timeout: 5s
+      start_period: 30s
       retries: 5
 
-# Note: Using host path mounts for Unraid compatibility
-# Data persists in ${HOST_WORKDIR}/data/ directory structure
-# Database data directories are created automatically by Docker
 
-# Custom network for service communication
 networks:
   starbunk-network:
     driver: bridge
-    ipam:
-      config:
-        - subnet: 172.31.0.0/16
+    name: starbunk-network  # Force explicit name so multi-stack Portainer deployments share the same bridge

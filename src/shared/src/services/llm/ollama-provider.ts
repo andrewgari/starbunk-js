@@ -1,7 +1,9 @@
 /**
- * Ollama LLM Provider
+ * Ollama LLM Provider — primary provider for local LLM inference.
  *
- * Primary provider for local LLM inference via Ollama.
+ * Communicates with a locally-running Ollama server via its HTTP chat API.
+ * Intended to be used first in the provider priority chain so that inference
+ * stays local and free; OpenAIProvider is the cloud fallback.
  */
 
 import { logLayer } from '../../observability/log-layer';
@@ -9,6 +11,9 @@ import { LlmProvider, LlmMessage, LlmCompletionOptions, LlmCompletionResult } fr
 
 const logger = logLayer.withPrefix('OllamaProvider');
 
+// Structurally identical to LlmMessage — typed separately so the shape is
+// explicit when constructing the Ollama API body, rather than relying on
+// duck-typing between the shared interface and the provider-specific payload.
 interface OllamaChatMessage {
   role: 'system' | 'user' | 'assistant';
   content: string;
@@ -32,10 +37,23 @@ export class OllamaProvider implements LlmProvider {
   private readonly defaultModel: string;
 
   constructor(apiUrl?: string, defaultModel?: string) {
-    this.apiUrl = apiUrl || process.env.OLLAMA_API_URL || 'http://127.0.0.1:11434';
-    this.defaultModel = defaultModel || process.env.OLLAMA_DEFAULT_MODEL || 'llama3';
+    this.apiUrl =
+      apiUrl ||
+      process.env.OLLAMA_BASE_URL ||
+      process.env.LOCAL_LLM_API_KEY ||
+      'http://127.0.0.1:11434';
+    this.defaultModel =
+      defaultModel ||
+      process.env.OLLAMA_DEFAULT_MODEL ||
+      process.env.LOCAL_LLM_DEFAULT_MODEL ||
+      'llama3';
   }
 
+  /**
+   * Returns true when an API URL is configured — this does NOT verify that the
+   * Ollama server is actually running. A network error during generateCompletion
+   * will surface the real connectivity failure at call time.
+   */
   isAvailable(): boolean {
     return !!this.apiUrl;
   }
@@ -44,7 +62,17 @@ export class OllamaProvider implements LlmProvider {
     messages: LlmMessage[],
     options: LlmCompletionOptions,
   ): Promise<LlmCompletionResult> {
-    const model = options.model || this.defaultModel;
+    const requestedModel = options.model;
+    // Only use options.model if it's not a known cloud-provider model name
+    const model =
+      requestedModel &&
+      !requestedModel.startsWith('gemini') &&
+      !requestedModel.startsWith('claude') &&
+      !requestedModel.startsWith('gpt') &&
+      !requestedModel.startsWith('o1') &&
+      !requestedModel.startsWith('o3')
+        ? requestedModel
+        : this.defaultModel;
     const url = `${this.apiUrl}/api/chat`;
 
     logger

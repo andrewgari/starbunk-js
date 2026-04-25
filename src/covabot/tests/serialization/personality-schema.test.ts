@@ -3,8 +3,6 @@ import {
   identitySchema,
   speechPatternsSchema,
   personalitySchema,
-  conditionSchema,
-  triggerSchema,
   socialBatterySchema,
   llmConfigSchema,
   profileSchema,
@@ -160,12 +158,13 @@ describe('personality-schema', () => {
       expect(result.success).toBe(true);
     });
 
-    it('should require system_prompt', () => {
+    it('should allow omitting system_prompt (populated from markdown files at load time)', () => {
       const result = personalitySchema.safeParse({
         traits: ['friendly'],
       });
 
-      expect(result.success).toBe(false);
+      expect(result.success).toBe(true);
+      expect(result.data?.system_prompt).toBeUndefined();
     });
 
     it('should apply defaults for optional fields', () => {
@@ -181,162 +180,6 @@ describe('personality-schema', () => {
         sarcasm_level: 0.3,
         technical_bias: 0.5,
       });
-    });
-  });
-
-  describe('conditionSchema', () => {
-    it('should validate simple conditions', () => {
-      expect(conditionSchema.safeParse({ matches_pattern: 'test.*' }).success).toBe(true);
-      expect(conditionSchema.safeParse({ contains_word: 'hello' }).success).toBe(true);
-      expect(conditionSchema.safeParse({ contains_phrase: 'hello world' }).success).toBe(true);
-      expect(conditionSchema.safeParse({ from_user: '123456789' }).success).toBe(true);
-      expect(conditionSchema.safeParse({ with_chance: 0.5 }).success).toBe(true);
-      expect(conditionSchema.safeParse({ always: true }).success).toBe(true);
-    });
-
-    it('should reject empty condition', () => {
-      const result = conditionSchema.safeParse({});
-
-      expect(result.success).toBe(false);
-      expect(result.error?.message).toContain('At least one condition');
-    });
-
-    it('should validate with_chance in range', () => {
-      expect(conditionSchema.safeParse({ with_chance: 0 }).success).toBe(true);
-      expect(conditionSchema.safeParse({ with_chance: 1 }).success).toBe(true);
-      expect(conditionSchema.safeParse({ with_chance: 0.5 }).success).toBe(true);
-    });
-
-    it('should reject with_chance out of range', () => {
-      expect(conditionSchema.safeParse({ with_chance: -0.1 }).success).toBe(false);
-      expect(conditionSchema.safeParse({ with_chance: 1.1 }).success).toBe(false);
-    });
-
-    it('should validate any_of array', () => {
-      const result = conditionSchema.safeParse({
-        any_of: [{ contains_word: 'hello' }, { contains_word: 'hi' }],
-      });
-
-      expect(result.success).toBe(true);
-    });
-
-    it('should validate all_of array', () => {
-      const result = conditionSchema.safeParse({
-        all_of: [{ from_user: '123' }, { with_chance: 0.5 }],
-      });
-
-      expect(result.success).toBe(true);
-    });
-
-    it('should validate none_of array', () => {
-      const result = conditionSchema.safeParse({
-        none_of: [{ contains_word: 'spam' }],
-      });
-
-      expect(result.success).toBe(true);
-    });
-
-    it('should validate deeply nested conditions', () => {
-      const result = conditionSchema.safeParse({
-        any_of: [
-          {
-            all_of: [
-              { from_user: '123' },
-              {
-                none_of: [{ contains_word: 'ignore' }],
-              },
-            ],
-          },
-          { with_chance: 0.1 },
-        ],
-      });
-
-      expect(result.success).toBe(true);
-    });
-
-    it('should reject nested empty conditions', () => {
-      const result = conditionSchema.safeParse({
-        any_of: [{}],
-      });
-
-      expect(result.success).toBe(false);
-    });
-  });
-
-  describe('triggerSchema', () => {
-    it('should validate complete trigger', () => {
-      const result = triggerSchema.safeParse({
-        name: 'greeting',
-        conditions: { contains_word: 'hello' },
-        use_llm: true,
-        response_chance: 0.8,
-        responses: ['Hello!', 'Hi!'],
-      });
-
-      expect(result.success).toBe(true);
-    });
-
-    it('should require name', () => {
-      const result = triggerSchema.safeParse({
-        conditions: { always: true },
-        use_llm: true,
-      });
-
-      expect(result.success).toBe(false);
-    });
-
-    it('should require conditions', () => {
-      const result = triggerSchema.safeParse({
-        name: 'test',
-        use_llm: true,
-      });
-
-      expect(result.success).toBe(false);
-    });
-
-    it('should apply default for use_llm', () => {
-      const result = triggerSchema.safeParse({
-        name: 'test',
-        conditions: { always: true },
-      });
-
-      expect(result.success).toBe(true);
-      expect(result.data?.use_llm).toBe(true);
-    });
-
-    it('should accept string response', () => {
-      const result = triggerSchema.safeParse({
-        name: 'test',
-        conditions: { always: true },
-        use_llm: false,
-        responses: 'Single response',
-      });
-
-      expect(result.success).toBe(true);
-      expect(result.data?.responses).toBe('Single response');
-    });
-
-    it('should accept array responses', () => {
-      const result = triggerSchema.safeParse({
-        name: 'test',
-        conditions: { always: true },
-        use_llm: false,
-        responses: ['Response 1', 'Response 2'],
-      });
-
-      expect(result.success).toBe(true);
-      expect(result.data?.responses).toEqual(['Response 1', 'Response 2']);
-    });
-
-    it('should reject response_chance out of range', () => {
-      const result = triggerSchema.safeParse({
-        name: 'test',
-        conditions: { always: true },
-        use_llm: true,
-        response_chance: 1.5,
-      });
-
-      expect(result.success).toBe(false);
     });
   });
 
@@ -421,12 +264,6 @@ describe('personality-schema', () => {
       personality: {
         system_prompt: 'You are a test bot.',
       },
-      triggers: [
-        {
-          name: 'test',
-          conditions: { always: true },
-        },
-      ],
     };
 
     it('should validate complete profile', () => {
@@ -449,14 +286,21 @@ describe('personality-schema', () => {
       expect(result.success).toBe(false);
     });
 
-    it('should require at least one trigger', () => {
+    it('should accept name_aliases', () => {
       const result = profileSchema.safeParse({
         ...validProfile,
-        triggers: [],
+        name_aliases: ['cova', 'covabot'],
       });
 
-      expect(result.success).toBe(false);
-      expect(result.error?.message).toContain('At least one trigger');
+      expect(result.success).toBe(true);
+      expect(result.data?.name_aliases).toEqual(['cova', 'covabot']);
+    });
+
+    it('should default name_aliases to empty array', () => {
+      const result = profileSchema.safeParse(validProfile);
+
+      expect(result.success).toBe(true);
+      expect(result.data?.name_aliases).toEqual([]);
     });
 
     it('should validate optional avatar_url as URL', () => {
@@ -506,12 +350,6 @@ describe('personality-schema', () => {
           personality: {
             system_prompt: 'You are a test bot.',
           },
-          triggers: [
-            {
-              name: 'test',
-              conditions: { always: true },
-            },
-          ],
         },
       });
 
@@ -531,7 +369,6 @@ describe('personality-schema', () => {
           display_name: 'Test Bot',
           identity: { type: 'random' },
           personality: { system_prompt: 'Test' },
-          triggers: [{ name: 'test', conditions: { always: true } }],
         },
         extraKey: 'should be ignored',
       });

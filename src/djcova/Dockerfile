@@ -58,7 +58,7 @@ RUN apk add --no-cache ffmpeg openssl dumb-init curl python3 py3-pip && \
     adduser -S -D -H -u 1001 -h /app -s /sbin/nologin -G djcova djcova && \
     mkdir -p /tmp/djcova && \
     chown -R djcova:djcova /tmp/djcova && \
-    pip3 install --no-cache-dir --break-system-packages "yt-dlp==2024.10.22"
+    pip3 install --no-cache-dir --break-system-packages yt-dlp
 
 # Copy only production dependencies and built artifacts from builder
 COPY --from=builder --chown=djcova:djcova /app/node_modules ./node_modules
@@ -94,9 +94,9 @@ LABEL prometheus.io/path="/metrics"
 LABEL prometheus.io/port="3000"
 
 # Health check (prefers HEALTH_PORT, then METRICS_PORT, else defaults)
-# Using /live endpoint for liveness check (simpler, doesn't fail on Discord connection issues)
+# Uses /health endpoint to verify startup completed successfully (returns 503 during init or if startup failed)
 HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
-    CMD sh -c 'PORT="${METRICS_PORT:-3000}"; curl -fsS "http://127.0.0.1:${PORT}/live" || exit 1'
+    CMD sh -c 'PORT="${METRICS_PORT:-3000}"; curl -fsS "http://127.0.0.1:${PORT}/health" || exit 1'
 
 EXPOSE 3000
 

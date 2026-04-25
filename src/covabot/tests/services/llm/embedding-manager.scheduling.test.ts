@@ -12,7 +12,7 @@ describe('EmbeddingManager - Scheduling', () => {
     vi.resetModules();
     process.env = { ...originalEnv };
     // Mock Ollama to be available
-    process.env.OLLAMA_API_URL = 'http://localhost:11434';
+    process.env.LOCAL_LLM_API_KEY = 'http://localhost:11434';
   });
 
   afterEach(() => {
@@ -79,4 +79,3 @@ describe('EmbeddingManager - Scheduling', () => {
     expect(results).toEqual([]);
   });
 });
-

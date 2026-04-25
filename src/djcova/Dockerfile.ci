@@ -7,6 +7,7 @@ FROM node:22-alpine AS runtime
 # Build-time arguments for non-secret environment variables
 ARG DEBUG_MODE=false
 ARG NODE_ENV=production
+ARG APP_VERSION=dev
 ARG LOG_LEVEL=info
 ARG LOG_FORMAT=json
 ARG ENABLE_METRICS=true
@@ -41,6 +42,7 @@ COPY --chown=djcova:djcova src/djcova/dist ./src/djcova/dist
 # Set default environment variables from build args
 ENV DEBUG_MODE=${DEBUG_MODE} \
     NODE_ENV=${NODE_ENV} \
+    APP_VERSION=${APP_VERSION} \
     LOG_LEVEL=${LOG_LEVEL} \
     LOG_FORMAT=${LOG_FORMAT} \
     ENABLE_METRICS=${ENABLE_METRICS} \

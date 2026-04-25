@@ -1,0 +1,29 @@
+{
+  "name": "@starbunk/e2e",
+  "version": "1.0.0",
+  "private": true,
+  "description": "End-to-end tests for StarBunk — sends real Discord messages and validates bot responses",
+  "scripts": {
+    "test": "vitest run --config vitest.config.ts",
+    "test:watch": "vitest --config vitest.config.ts",
+    "test:infra": "vitest run --config vitest.config.ts src/tests/infrastructure",
+    "test:bunkbot": "vitest run --config vitest.config.ts src/tests/bunkbot",
+    "test:bluebot": "vitest run --config vitest.config.ts src/tests/bluebot",
+    "test:djcova": "vitest run --config vitest.config.ts src/tests/djcova",
+    "test:covabot": "vitest run --config vitest.config.ts src/tests/covabot"
+  },
+  "dependencies": {
+    "@discordjs/rest": "^2.5.0",
+    "@discordjs/voice": "^0.18.0",
+    "discord-api-types": "^0.38.23",
+    "discord.js": "^14.26.3",
+    "dotenv": "^16.0.0",
+    "js-yaml": "^4.1.1",
+    "opusscript": "^0.0.8"
+  },
+  "devDependencies": {
+    "@types/js-yaml": "^4.0.9",
+    "@types/node": "^20.0.0",
+    "vitest": "^4.0.17"
+  }
+}

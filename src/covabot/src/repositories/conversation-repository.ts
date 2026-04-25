@@ -106,9 +106,14 @@ export class ConversationRepository extends PostgresBaseRepository<ConversationR
       );
 
       // Reverse to get chronological order
+      // Reverse so the result is in ascending chronological order
+      // (query fetches most-recent-first for efficient LIMIT; callers expect oldest-first)
       const messages = rows.reverse().map(row => ({
         userId: row.user_id,
-        userName: null, // userName removed from new schema
+        // userName is null: the column was removed from the schema to avoid
+        // storing PII beyond the Discord user ID. Display names are resolved
+        // at render time from the Discord client, not from the DB.
+        userName: null,
         content: row.message_content,
         botResponse: row.response_content,
         timestamp: new Date(row.created_at),
@@ -167,7 +172,7 @@ export class ConversationRepository extends PostgresBaseRepository<ConversationR
 
       const messages = rows.reverse().map(row => ({
         userId: row.user_id,
-        userName: null,
+        userName: null, // not stored in DB — see getChannelContext comment
         content: row.message_content,
         botResponse: row.response_content,
         timestamp: new Date(row.created_at),

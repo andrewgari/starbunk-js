@@ -7,6 +7,11 @@ import {
   disconnectVoiceConnection,
 } from '../utils/voice-utils';
 import { logger } from '../observability/logger';
+import { getDJCovaMetrics } from '../observability/djcova-metrics';
+import { DJCovaErrorCode } from '../errors';
+import { getMetricsService } from '@starbunk/shared/observability/metrics-service';
+import { logError } from '@starbunk/shared/errors';
+import { markPlayCommandIssued } from '../health/djcova-health';
 
 /**
  * DJCovaService - Business logic layer
@@ -23,39 +28,78 @@ export class DJCovaService {
    * Play a YouTube URL in a voice channel
    */
   async play(interaction: ChatInputCommandInteraction, url: string): Promise<void> {
+    const guildId = interaction.guild?.id ?? 'unknown';
+    logger.info(`Play request received for URL: ${url}`);
+    logger.debug(`Guild: ${guildId}, Channel: ${interaction.channelId}`);
+
     // Validate voice channel access
+    logger.debug('Validating voice channel access...');
     const validation = validateVoiceChannelAccess(interaction);
     if (!validation.isValid) {
-      throw new Error(validation.errorMessage || 'Voice channel validation failed');
+      const errorMsg = validation.errorMessage || 'Voice channel validation failed';
+      logger.warn(`Voice channel validation failed: ${errorMsg}`);
+      throw new Error(errorMsg);
     }
+    logger.debug('✅ Voice channel validation passed');
 
     const { voiceChannel } = validation;
 
     if (!voiceChannel) {
-      throw new Error('Voice channel is not available');
+      const errorMsg = 'Voice channel is not available';
+      logger.error(errorMsg);
+      throw new Error(errorMsg);
     }
+    logger.debug(`Voice channel: ${voiceChannel.name} (${voiceChannel.id})`);
 
     // Validate YouTube URL
+    logger.debug('Validating YouTube URL...');
     if (!this.isValidYouTubeUrl(url)) {
+      logger
+        .withMetadata({ error_code: DJCovaErrorCode.DJCOVA_INVALID_URL, url, guild_id: guildId })
+        .warn('Invalid YouTube URL provided');
       throw new Error('Please provide a valid YouTube URL (youtube.com or youtu.be)');
     }
+    logger.debug('✅ YouTube URL validation passed');
 
     // Create voice connection
+    logger.info('Creating voice connection...');
     const connection = createVoiceConnection(voiceChannel, voiceChannel.guild.voiceAdapterCreator);
+    logger.debug('✅ Voice connection created');
 
     // Subscribe player to connection
-    const subscription = subscribePlayerToConnection(connection, this.djCova.getPlayer());
+    logger.debug('Subscribing player to connection...');
+    const subscription = await subscribePlayerToConnection(connection, this.djCova.getPlayer());
     if (!subscription) {
+      logError(
+        logger,
+        DJCovaErrorCode.DJCOVA_VOICE_JOIN_FAILED,
+        'Failed to connect audio player to voice channel',
+        {
+          guild_id: guildId,
+        },
+      );
+      getDJCovaMetrics().trackVoiceJoin(guildId, 'failed');
+      getMetricsService().trackBotError(
+        'djcova',
+        DJCovaErrorCode.DJCOVA_VOICE_JOIN_FAILED,
+        guildId,
+      );
       throw new Error('Failed to connect audio player to voice channel');
     }
+    getDJCovaMetrics().trackVoiceJoin(guildId, 'joined');
+    logger.debug('✅ Player subscribed to connection');
 
     if (!interaction.guild) {
-      throw new Error('This command can only be used within a server (guild) context');
+      const errorMsg = 'This command can only be used within a server (guild) context';
+      logger.error(errorMsg);
+      throw new Error(errorMsg);
     }
 
     // Initialize idle management with notification callback
+    logger.debug('Setting up idle management with notification callback...');
     const notificationCallback = async (message: string) => {
       try {
+        logger.debug(`Sending idle notification: ${message}`);
         await interaction.followUp({ content: message, ephemeral: false });
       } catch (error) {
         logger
@@ -64,14 +108,61 @@ export class DJCovaService {
       }
     };
 
+    logger.debug('Initializing idle management...');
     this.djCova.initializeIdleManagement(
       interaction.guild.id,
       interaction.channelId,
       notificationCallback,
     );
+    logger.debug('✅ Idle management initialized');
 
-    // Start playback
+    // Register the subscription before play() so it can be tracked for cleanup.
+    // play() uses stopAudioOnly() internally which preserves the voice subscription,
+    // so the subscription is safe to register here.
+    this.djCova.setSubscription(subscription);
+    markPlayCommandIssued(guildId);
+    logger.info('Starting playback...');
     await this.djCova.play(url);
+    logger.info('✅ Playback started successfully');
+  }
+
+  /**
+   * Play a YouTube URL in a known voice channel directly (used by E2E test handler).
+   * Bypasses the slash-command interaction layer.
+   */
+  async playInVoiceChannel(
+    voiceChannel: { id: string; name: string; guild: { id: string; voiceAdapterCreator: unknown } },
+    url: string,
+    notifyFn?: (message: string) => Promise<void>,
+  ): Promise<void> {
+    const guildId = voiceChannel.guild.id;
+    logger.info(`E2E play request in channel: ${voiceChannel.name} (${voiceChannel.id})`);
+
+    if (!this.isValidYouTubeUrl(url)) {
+      throw new Error('Please provide a valid YouTube URL (youtube.com or youtu.be)');
+    }
+
+    const connection = createVoiceConnection(voiceChannel, voiceChannel.guild.voiceAdapterCreator);
+    const subscription = await subscribePlayerToConnection(connection, this.djCova.getPlayer());
+
+    if (!subscription) {
+      getDJCovaMetrics().trackVoiceJoin(guildId, 'failed');
+      throw new Error('Failed to connect audio player to voice channel');
+    }
+
+    getDJCovaMetrics().trackVoiceJoin(guildId, 'joined');
+    this.djCova.initializeIdleManagement(guildId, voiceChannel.id, notifyFn);
+    this.djCova.setSubscription(subscription);
+    markPlayCommandIssued(guildId);
+    await this.djCova.play(url);
+  }
+
+  /**
+   * Stop playback and disconnect by guild ID directly (used by E2E test handler).
+   */
+  stopInGuild(guildId: string): void {
+    this.djCova.stop();
+    disconnectVoiceConnection(guildId);
   }
 
   /**

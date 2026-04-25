@@ -1,6 +1,7 @@
 // Idle Manager Service for DJCova auto-disconnect functionality
 import { disconnectVoiceConnection } from '../utils/voice-utils';
 import { logger } from '../observability/logger';
+import { SharedErrorCode, logError } from '@starbunk/shared/errors';
 
 export interface IdleManagerConfig {
   timeoutSeconds: number;
@@ -115,9 +116,10 @@ export class IdleManager {
         `Successfully disconnected from voice channel in guild ${this.config.guildId} due to inactivity`,
       );
     } catch (error) {
-      logger
-        .withError(error instanceof Error ? error : new Error(String(error)))
-        .error('Error handling idle timeout');
+      logError(logger, SharedErrorCode.UNKNOWN, 'Error handling idle timeout', {
+        cause: error,
+        guild_id: this.config.guildId,
+      });
 
       // Still clean up timer state even if disconnect failed
       this.timer = null;

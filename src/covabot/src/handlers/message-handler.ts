@@ -18,7 +18,14 @@ import { ResponseDecisionService, DecisionContext } from '@/services/response-de
 import { LlmService } from '@/services/llm-service';
 import { PersonalityService } from '@/services/personality-service';
 import { SocialBatteryService, SocialBatteryConfig } from '@/services/social-battery-service';
-import { CovaProfile, LlmContext } from '@/models/memory-types';
+import {
+  CovaProfile,
+  ConversationContext,
+  EngagementContext,
+  LlmContext,
+} from '@/models/memory-types';
+import { VERBOSE_LOGGING } from '@/utils/verbose-mode';
+import { getBotActivityTracker } from '@starbunk/shared/health/bot-activity-tracker';
 
 const logger = logLayer.withPrefix('MessageHandler');
 
@@ -62,6 +69,8 @@ export class MessageHandler {
       return;
     }
 
+    getBotActivityTracker('bot_activity').onMessageReceived();
+
     logger
       .withMetadata({
         message_id: message.id,
@@ -84,6 +93,7 @@ export class MessageHandler {
             message_id: message.id,
           })
           .error('Error processing message for profile');
+        getBotActivityTracker('bot_activity').onError('profile_processing');
       }
     }
 
@@ -109,41 +119,68 @@ export class MessageHandler {
     const ctx: DecisionContext = { profile, message, botUserId };
     const decision = await this.decisionService.shouldRespond(ctx);
 
-    if (!decision.shouldRespond) {
-      logger
-        .withMetadata({
-          profile_id: profile.id,
-          reason: decision.reason,
-        })
-        .debug('Decided not to respond');
-      return;
+    if (decision.shouldRespond) {
+      getBotActivityTracker('bot_activity').onTriggerFired('response_decision');
     }
 
-    // Step 2: Get response content
-    let responseContent: string;
-
-    if (!decision.useLlm && decision.patternResponse) {
-      // Use canned pattern response
-      responseContent = decision.patternResponse;
-    } else {
-      // Generate LLM response
-      const llmResponse = await this.generateLlmResponse(profile, message);
-
-      if (llmResponse.shouldIgnore) {
+    if (!decision.shouldRespond) {
+      if (VERBOSE_LOGGING) {
         logger
           .withMetadata({
             profile_id: profile.id,
+            reason: decision.reason,
+            channel_id: message.channelId,
+            author: message.author.username,
+            content_preview: message.content.substring(0, 80),
           })
-          .debug('LLM decided to ignore');
-        return;
+          .info('Not responding to message');
+      } else {
+        logger
+          .withMetadata({ profile_id: profile.id, reason: decision.reason })
+          .debug('Decided not to respond');
       }
-
-      responseContent = llmResponse.content;
+      return;
     }
+
+    // Step 2: Get response content from LLM
+    const llmResponse = await this.generateLlmResponse(profile, message, botUserId);
+
+    if (llmResponse.shouldIgnore) {
+      if (decision.reason === 'direct_mention') {
+        logger
+          .withMetadata({
+            profile_id: profile.id,
+            channel_id: message.channelId,
+            author: message.author.username,
+            content_preview: message.content.substring(0, 80),
+          })
+          .warn('LLM returned IGNORE for a direct @mention — this is a prompt compliance failure');
+      } else if (VERBOSE_LOGGING) {
+        logger
+          .withMetadata({
+            profile_id: profile.id,
+            channel_id: message.channelId,
+            author: message.author.username,
+            content_preview: message.content.substring(0, 80),
+          })
+          .info('LLM chose to stay silent (IGNORE)');
+      } else {
+        logger.withMetadata({ profile_id: profile.id }).debug('LLM decided to ignore');
+      }
+      return;
+    }
+
+    const responseContent = llmResponse.content;
 
     // Step 3: Send response
     if (responseContent && responseContent.trim().length > 0) {
-      await this.sendResponse(profile, message, responseContent);
+      try {
+        await this.sendResponse(profile, message, responseContent);
+        getBotActivityTracker('bot_activity').onResponseSent(true);
+      } catch (sendError) {
+        getBotActivityTracker('bot_activity').onResponseSent(false, 'send_failed');
+        throw sendError;
+      }
 
       // Step 4: Record in memory
       await this.memoryService.storeConversation(
@@ -171,7 +208,6 @@ export class MessageHandler {
           profile_id: profile.id,
           channel_id: message.channelId,
           response_length: responseContent.length,
-          trigger: decision.triggerName,
           reason: decision.reason,
         })
         .info('Response sent');
@@ -184,9 +220,10 @@ export class MessageHandler {
   private async generateLlmResponse(
     profile: CovaProfile,
     message: Message,
+    botUserId: string,
   ): Promise<{ content: string; shouldIgnore: boolean }> {
     // Build context
-    const context = await this.buildLlmContext(profile, message);
+    const context = await this.buildLlmContext(profile, message, botUserId);
 
     // Generate response
     const response = await this.llmService.generateResponse(
@@ -205,12 +242,16 @@ export class MessageHandler {
   /**
    * Build full LLM context from memory
    */
-  private async buildLlmContext(profile: CovaProfile, message: Message): Promise<LlmContext> {
+  private async buildLlmContext(
+    profile: CovaProfile,
+    message: Message,
+    botUserId: string,
+  ): Promise<LlmContext> {
     // Get conversation history
     const channelContext = await this.memoryService.getChannelContext(
       profile.id,
       message.channelId,
-      8, // Last 8 messages
+      profile.memory.channelWindow,
     );
     const conversationHistory = this.memoryService.formatContextForLlm(
       channelContext,
@@ -224,11 +265,101 @@ export class MessageHandler {
     // Get trait modifiers
     const traitModifiers = await this.personalityService.getTraitModifiersForLlm(profile.id);
 
+    // Build structured engagement context
+    const engagementContext = this.buildEngagementContext(
+      profile,
+      message,
+      channelContext,
+      botUserId,
+    );
+
+    if (VERBOSE_LOGGING) {
+      logger
+        .withMetadata({
+          profile_id: profile.id,
+          channel_id: message.channelId,
+          history_messages: channelContext.messages.length,
+          user_facts_length: userFactsStr.length,
+          has_trait_modifiers: !!traitModifiers,
+          was_mentioned: engagementContext.wasMentioned,
+          name_referenced: engagementContext.nameReferenced,
+          is_direct_exchange: engagementContext.isDirectExchange,
+          participants: engagementContext.activeParticipants,
+          seconds_since_last_response: engagementContext.secondsSinceLastResponse,
+          convo_message_count: engagementContext.conversationMessageCount,
+          system_prompt_length: profile.personality.systemPrompt.length,
+          traits_count: profile.personality.traits.length,
+          topic_affinities_count: profile.personality.topicAffinities.length,
+          background_facts_count: profile.personality.backgroundFacts.length,
+        })
+        .info('LLM context built — sending to model');
+    }
+
     return {
       systemPrompt: profile.personality.systemPrompt,
       conversationHistory,
       userFacts: userFactsStr,
       traitModifiers,
+      engagementContext,
+    };
+  }
+
+  /**
+   * Extract structured engagement signals from message + conversation history.
+   * These are passed to the LLM so it can make a natural, weighted engagement decision.
+   */
+  private buildEngagementContext(
+    profile: CovaProfile,
+    message: Message,
+    channelContext: ConversationContext,
+    botUserId: string,
+  ): EngagementContext {
+    // Find unique human participants in the recent conversation window
+    const seenUserIds = new Set<string>();
+    const participantNames: string[] = [];
+
+    for (const msg of channelContext.messages) {
+      if (msg.userId !== botUserId && !seenUserIds.has(msg.userId)) {
+        seenUserIds.add(msg.userId);
+        participantNames.push(msg.userName || `User-${msg.userId.slice(-4)}`);
+      }
+    }
+
+    // A direct exchange: 1 or 2 unique human speakers (private back-and-forth)
+    const isDirectExchange = seenUserIds.size <= 2;
+
+    // Time since the bot last responded in this channel
+    let secondsSinceLastResponse: number | null = null;
+    for (let i = channelContext.messages.length - 1; i >= 0; i--) {
+      const msg = channelContext.messages[i];
+      if (msg.botResponse) {
+        secondsSinceLastResponse = Math.floor((Date.now() - msg.timestamp.getTime()) / 1000);
+        break;
+      }
+    }
+
+    // Detect if any of the bot's known names/aliases appear in the message text
+    const lowerContent = message.content.toLowerCase();
+    const nameReferenced =
+      profile.nameAliases.length > 0 &&
+      profile.nameAliases.some(alias => {
+        const pattern = new RegExp(`\\b${alias.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`);
+        return pattern.test(lowerContent);
+      });
+
+    if (nameReferenced) {
+      logger
+        .withMetadata({ profile_id: profile.id, content_preview: message.content.substring(0, 50) })
+        .debug('Name referenced in message');
+    }
+
+    return {
+      wasMentioned: message.mentions.users.has(botUserId),
+      nameReferenced,
+      isDirectExchange,
+      activeParticipants: participantNames,
+      secondsSinceLastResponse,
+      conversationMessageCount: channelContext.messages.length,
     };
   }
 

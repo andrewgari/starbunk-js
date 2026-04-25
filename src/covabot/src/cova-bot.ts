@@ -7,7 +7,9 @@
 
 import { Client, Events, GatewayIntentBits, Message } from 'discord.js';
 import { logLayer } from '@starbunk/shared/observability/log-layer';
+import { setApplicationHealth } from '@starbunk/shared/observability/health-server';
 import { DiscordService } from '@starbunk/shared/discord/discord-service';
+import { notifyStartupIfNewVersion } from '@starbunk/shared/discord/startup-dm';
 import { PostgresService } from '@starbunk/shared/database';
 import { initializeDatabase } from '@/database';
 import { MemoryService } from '@/services/memory-service';
@@ -28,6 +30,7 @@ import {
   getDefaultPersonalitiesPath,
 } from '@/serialization/personality-parser';
 import { EmbeddingManager } from '@/services/llm';
+import { VERBOSE_LOGGING } from '@/utils/verbose-mode';
 
 const logger = logLayer.withPrefix('CovaBot');
 
@@ -35,13 +38,23 @@ export interface CovaBotConfig {
   discordToken: string;
   personalitiesPath?: string;
   databasePath?: string;
-  // LLM Provider configuration (priority: Ollama > Gemini > OpenAI)
-  ollamaApiUrl?: string;
+  // Ollama (local, no API key)
+  ollamaBaseUrl?: string;
   ollamaDefaultModel?: string;
+  // Anthropic / Claude
+  anthropicApiKey?: string;
+  anthropicDefaultModel?: string;
+  // Google Gemini
   geminiApiKey?: string;
   geminiDefaultModel?: string;
+  // OpenAI
   openaiApiKey?: string;
   openaiDefaultModel?: string;
+  // Legacy aliases
+  localLlmApiKey?: string;
+  localLlmDefaultModel?: string;
+  cloudLlmApiKey?: string;
+  cloudLlmDefaultModel?: string;
 }
 
 export class CovaBot {
@@ -122,7 +135,16 @@ export class CovaBot {
     return Array.from(this.profiles.values());
   }
 
-  getServices() {
+  getServices(): {
+    db: PostgresService | null;
+    memory: MemoryService | null;
+    interest: InterestService | null;
+    socialBattery: SocialBatteryService | null;
+    responseDecision: ResponseDecisionService | null;
+    llm: LlmService | null;
+    personality: PersonalityService | null;
+    embedding: EmbeddingManager | null;
+  } {
     return {
       db: this.pgService,
       memory: this.memoryService,
@@ -147,6 +169,59 @@ export class CovaBot {
     logger
       .withMetadata({ count: this.profiles.size, path: personalitiesPath })
       .info('Profiles loaded');
+
+    // Always audit personality data completeness — warns on startup if data is missing
+    for (const profile of this.profiles.values()) {
+      const issues: string[] = [];
+
+      if (
+        !profile.personality.systemPrompt ||
+        profile.personality.systemPrompt.trim().length < 50
+      ) {
+        issues.push(
+          `system_prompt too short or missing (${profile.personality.systemPrompt.length} chars)`,
+        );
+      }
+      if (profile.personality.traits.length === 0) {
+        issues.push('no traits defined');
+      }
+      if (profile.personality.topicAffinities.length === 0) {
+        issues.push('no topic_affinities defined');
+      }
+      if (profile.nameAliases.length === 0) {
+        issues.push('no name_aliases — bot will never detect name mentions');
+      }
+
+      if (issues.length > 0) {
+        logger
+          .withMetadata({
+            profile_id: profile.id,
+            display_name: profile.displayName,
+            issues,
+          })
+          .warn('Personality data incomplete');
+      } else if (VERBOSE_LOGGING) {
+        logger
+          .withMetadata({
+            profile_id: profile.id,
+            display_name: profile.displayName,
+            system_prompt_length: profile.personality.systemPrompt.length,
+            traits: profile.personality.traits,
+            topic_affinities: profile.personality.topicAffinities,
+            background_facts_count: profile.personality.backgroundFacts.length,
+            name_aliases: profile.nameAliases,
+            social_battery: profile.socialBattery,
+            llm_model: profile.llmConfig.model,
+          })
+          .info('Personality loaded OK');
+      }
+    }
+
+    if (VERBOSE_LOGGING) {
+      logger
+        .withMetadata({ verbose: true, log_prompts: process.env.COVABOT_LOG_PROMPTS === 'true' })
+        .info('COVABOT_VERBOSE=true — decision logging enabled at INFO level');
+    }
   }
 
   private async initializeServices(): Promise<void> {
@@ -166,34 +241,33 @@ export class CovaBot {
     this.interestService = new InterestService(interestRepo);
     this.socialBatteryService = new SocialBatteryService(socialBatteryRepo);
     this.llmService = new LlmService({
-      ollamaApiUrl: this.config.ollamaApiUrl,
+      ollamaBaseUrl: this.config.ollamaBaseUrl,
       ollamaDefaultModel: this.config.ollamaDefaultModel,
+      anthropicApiKey: this.config.anthropicApiKey,
+      anthropicDefaultModel: this.config.anthropicDefaultModel,
       geminiApiKey: this.config.geminiApiKey,
       geminiDefaultModel: this.config.geminiDefaultModel,
       openaiApiKey: this.config.openaiApiKey,
       openaiDefaultModel: this.config.openaiDefaultModel,
+      localLlmApiKey: this.config.localLlmApiKey,
+      localLlmDefaultModel: this.config.localLlmDefaultModel,
+      cloudLlmApiKey: this.config.cloudLlmApiKey,
+      cloudLlmDefaultModel: this.config.cloudLlmDefaultModel,
     });
     this.personalityService = new PersonalityService(personalityRepo);
 
     this.embeddingManager = new EmbeddingManager({
-      ollamaApiUrl: this.config.ollamaApiUrl,
-      ollamaEmbeddingModel: process.env.OLLAMA_EMBEDDING_MODEL,
-      openaiApiKey: this.config.openaiApiKey,
-      openaiEmbeddingModel: process.env.OPENAI_EMBEDDING_MODEL,
+      localLlmApiKey: this.config.localLlmApiKey,
+      localLlmEmbeddingModel: process.env.LOCAL_LLM_EMBEDDING_MODEL,
+      cloudLlmApiKey: this.config.cloudLlmApiKey,
+      cloudLlmEmbeddingModel: process.env.CLOUD_LLM_EMBEDDING_MODEL,
     });
 
-    const chatModel = this.config.ollamaDefaultModel || process.env.OLLAMA_DEFAULT_MODEL;
+    const chatModel = this.config.localLlmDefaultModel || process.env.LOCAL_LLM_DEFAULT_MODEL;
     const additionalModels = chatModel ? [chatModel] : [];
     this.embeddingManager.startScheduledUpdates(additionalModels);
 
-    for (const profile of this.profiles.values()) {
-      await this.interestService.initializeFromProfile(profile);
-    }
-
-    this.responseDecisionService = new ResponseDecisionService(
-      this.interestService,
-      this.socialBatteryService,
-    );
+    this.responseDecisionService = new ResponseDecisionService(this.socialBatteryService);
 
     this.messageHandler = new MessageHandler(
       this.profiles,
@@ -225,7 +299,38 @@ export class CovaBot {
     DiscordService.getInstance().setClient(this.client);
 
     this.client.once(Events.ClientReady, readyClient => {
-      logger.withMetadata({ user_tag: readyClient.user.tag }).info('Discord client ready');
+      logger
+        .withMetadata({
+          user_tag: readyClient.user.tag,
+          guild_count: readyClient.guilds.cache.size,
+        })
+        .info('Discord client ready');
+      notifyStartupIfNewVersion(readyClient, 'CovaBot').catch(() => {
+        /* non-fatal */
+      });
+    });
+
+    // Prevent uncaught exceptions from gateway/network errors
+    this.client.on(Events.Error, error => {
+      logger.withError(error).error('Discord client error');
+    });
+
+    this.client.on(Events.ShardDisconnect, (closeEvent, shardId) => {
+      logger
+        .withMetadata({ code: closeEvent.code, reason: closeEvent.reason, shard_id: shardId })
+        .warn('Discord shard disconnected');
+      setApplicationHealth('unhealthy', `Discord disconnected (code ${closeEvent.code})`);
+    });
+
+    this.client.on(Events.ShardReconnecting, shardId => {
+      logger.withMetadata({ shard_id: shardId }).info('Discord shard reconnecting');
+    });
+
+    this.client.on(Events.ShardResume, (shardId, replayedEvents) => {
+      logger
+        .withMetadata({ shard_id: shardId, replayed_events: replayedEvents })
+        .info('Discord shard resumed');
+      setApplicationHealth('healthy');
     });
 
     this.client.on(Events.MessageCreate, async (message: Message) => {
@@ -249,6 +354,7 @@ export class CovaBot {
     await this.client.login(this.config.discordToken);
   }
 
+  /** Test-only: stop the singleton and clear it so tests can create a fresh instance. */
   static async resetInstance(): Promise<void> {
     if (CovaBot.instance) {
       await CovaBot.instance.stop();

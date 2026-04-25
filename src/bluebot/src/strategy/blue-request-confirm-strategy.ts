@@ -1,10 +1,12 @@
 import { Message } from 'discord.js';
-import { BlueStrategy } from '@/strategy/blue-strategy';
 import { matchesAnyName } from '@/utils/string-similarity';
 import { logger } from '@/observability/logger';
+import { SendAPIMessageStrategy } from '@starbunk/shared/strategy/send-api-message-strategy';
 
-export class RequestConfirmStrategy implements BlueStrategy {
+export class RequestConfirmStrategy extends SendAPIMessageStrategy {
   protected niceRegex = /blue?bot,? say something nice about (?<n>.+$)/i;
+  readonly name = 'RequestConfirmStrategy';
+  readonly priority = 40;
 
   protected isRequest(message: Message): boolean {
     return !!message.content.match(this.niceRegex);
@@ -18,17 +20,17 @@ export class RequestConfirmStrategy implements BlueStrategy {
     return null;
   }
 
-  shouldRespond(message: Message): Promise<boolean> {
-    const isRequest = this.isRequest(message);
-    const requestedName = this.getRequestedName(message);
+  async shouldTrigger(): Promise<boolean> {
+    const isRequest = this.isRequest(this.triggeringEvent!);
+    const requestedName = this.getRequestedName(this.triggeringEvent!);
 
     logger
       .withMetadata({
         strategy_name: 'RequestConfirmStrategy',
         is_request: isRequest,
         requested_name: requestedName,
-        message_content: message.content,
-        message_id: message.id,
+        message_content: this.triggeringEvent!.content,
+        message_id: this.triggeringEvent!.id,
       })
       .debug('RequestConfirmStrategy: Evaluating nice request');
 
@@ -37,7 +39,7 @@ export class RequestConfirmStrategy implements BlueStrategy {
         .withMetadata({
           strategy_name: 'RequestConfirmStrategy',
           requested_name: requestedName,
-          message_id: message.id,
+          message_id: this.triggeringEvent!.id,
         })
         .info('RequestConfirmStrategy: Nice request detected');
       return Promise.resolve(true);
@@ -46,17 +48,17 @@ export class RequestConfirmStrategy implements BlueStrategy {
     return Promise.resolve(false);
   }
 
-  async getResponse(message: Message): Promise<string> {
-    const friend = this.getFriendFromMessage(message);
+  async getResponse(_context: Message): Promise<string> {
+    const friend = this.getFriendFromMessage(this.triggeringEvent!);
     const response = `${friend}, I think you're pretty blue! :wink:`;
 
     logger
       .withMetadata({
         strategy_name: 'RequestConfirmStrategy',
-        requested_name: this.getRequestedName(message),
+        requested_name: this.getRequestedName(this.triggeringEvent!),
         resolved_friend: friend,
         response,
-        message_id: message.id,
+        message_id: this.triggeringEvent!.id,
       })
       .info('RequestConfirmStrategy: Generated compliment response');
 

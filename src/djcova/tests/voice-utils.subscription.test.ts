@@ -22,10 +22,12 @@ vi.mock('../src/observability/logger', () => ({
 // Stub @discordjs/voice so voice-utils can import it without touching real Discord voice internals
 vi.mock('@discordjs/voice', () => {
   const getVoiceConnection = vi.fn();
+  const entersState = vi.fn();
 
   return {
     joinVoiceChannel: vi.fn(),
     getVoiceConnection,
+    entersState,
     VoiceConnectionStatus: {
       Ready: 'ready',
       Disconnected: 'disconnected',
@@ -43,6 +45,7 @@ import {
   getGuildVoiceConnection,
   validateVoiceChannelAccess,
   canJoinVoiceChannel,
+  attachHealthMonitor,
 } from '../src/utils/voice-utils';
 
 describe('voice-utils subscription lifecycle', () => {
@@ -51,7 +54,10 @@ describe('voice-utils subscription lifecycle', () => {
     vi.mocked(Voice.joinVoiceChannel).mockReset();
   });
 
-  it('disconnectVoiceConnection destroys the connection and unsubscribes subscriptions', () => {
+  it('disconnectVoiceConnection destroys the connection and unsubscribes subscriptions', async () => {
+    // Mock entersState to resolve immediately (connection is ready)
+    vi.mocked(Voice.entersState).mockResolvedValue(undefined);
+
     type Subscription = { isActive: boolean; unsubscribe: () => void };
 
     const subscription1: Subscription = {
@@ -71,6 +77,7 @@ describe('voice-utils subscription lifecycle', () => {
     });
 
     const connection = {
+      state: { status: Voice.VoiceConnectionStatus.Connecting },
       // Simulate two sequential subscriptions on the same connection
       subscribe: vi.fn().mockReturnValueOnce(subscription1).mockReturnValueOnce(subscription2),
       // When the connection is destroyed, underlying library is expected to
@@ -85,8 +92,9 @@ describe('voice-utils subscription lifecycle', () => {
     vi.mocked(Voice.getVoiceConnection).mockReturnValue(connection as any);
 
     const player: unknown = {};
-    const returned1 = subscribePlayerToConnection(connection, player as any);
-    const returned2 = subscribePlayerToConnection(connection, player as any);
+    // Await the async calls
+    const returned1 = await subscribePlayerToConnection(connection, player as any);
+    const returned2 = await subscribePlayerToConnection(connection, player as any);
 
     expect(connection.subscribe).toHaveBeenCalledTimes(2);
     expect(returned1).toBe(subscription1);
@@ -127,27 +135,35 @@ describe('voice-utils subscription lifecycle', () => {
     expect(connection.destroy).toHaveBeenCalledTimes(1);
   });
 
-  it('subscribePlayerToConnection returns undefined when subscribe returns falsy', () => {
+  it('subscribePlayerToConnection returns undefined when subscribe returns falsy', async () => {
+    // Mock entersState to resolve immediately (connection is ready)
+    vi.mocked(Voice.entersState).mockResolvedValue(undefined);
+
     const connection = {
+      state: { status: Voice.VoiceConnectionStatus.Ready },
       subscribe: vi.fn().mockReturnValue(undefined),
     } as any;
 
     const player: unknown = {};
-    const result = subscribePlayerToConnection(connection, player as any);
+    const result = await subscribePlayerToConnection(connection, player as any);
 
     expect(connection.subscribe).toHaveBeenCalledTimes(1);
     expect(result).toBeUndefined();
   });
 
-  it('subscribePlayerToConnection returns undefined when subscribe throws', () => {
+  it('subscribePlayerToConnection returns undefined when subscribe throws', async () => {
+    // Mock entersState to resolve immediately (connection is ready)
+    vi.mocked(Voice.entersState).mockResolvedValue(undefined);
+
     const connection = {
+      state: { status: Voice.VoiceConnectionStatus.Ready },
       subscribe: vi.fn(() => {
         throw new Error('subscription failed');
       }),
     } as any;
 
     const player: unknown = {};
-    const result = subscribePlayerToConnection(connection, player as any);
+    const result = await subscribePlayerToConnection(connection, player as any);
 
     expect(connection.subscribe).toHaveBeenCalledTimes(1);
     expect(result).toBeUndefined();
@@ -197,6 +213,7 @@ describe('voice-utils subscription lifecycle', () => {
   it('createVoiceConnection reuses existing connection in same channel', () => {
     const existingConnection = {
       joinConfig: { channelId: 'channel-1' },
+      state: { status: Voice.VoiceConnectionStatus.Ready },
       destroy: vi.fn(),
       on: vi.fn(),
     } as any;
@@ -217,9 +234,39 @@ describe('voice-utils subscription lifecycle', () => {
     expect(result).toBe(existingConnection);
   });
 
+  it('createVoiceConnection destroys Disconnected connection in same channel and creates fresh one', () => {
+    const existingConnection = {
+      joinConfig: { channelId: 'channel-1' },
+      state: { status: Voice.VoiceConnectionStatus.Disconnected },
+      destroy: vi.fn(),
+      on: vi.fn(),
+    } as any;
+
+    const newConnection = {
+      on: vi.fn(),
+    } as any;
+
+    vi.mocked(Voice.getVoiceConnection).mockReturnValue(existingConnection as any);
+    vi.mocked(Voice.joinVoiceChannel).mockReturnValue(newConnection as any);
+
+    const channel = {
+      id: 'channel-1',
+      name: 'Music',
+      guild: { id: 'guild-1', voiceAdapterCreator: {} },
+      permissionsFor: vi.fn(),
+    } as any;
+
+    const result = createVoiceConnection(channel, channel.guild.voiceAdapterCreator);
+
+    expect(existingConnection.destroy).toHaveBeenCalledTimes(1);
+    expect(Voice.joinVoiceChannel).toHaveBeenCalledTimes(1);
+    expect(result).toBe(newConnection);
+  });
+
   it('createVoiceConnection destroys existing connection in different channel before joining new one', () => {
     const existingConnection = {
       joinConfig: { channelId: 'other-channel' },
+      state: { status: Voice.VoiceConnectionStatus.Ready },
       destroy: vi.fn(),
       on: vi.fn(),
     } as any;
@@ -342,6 +389,69 @@ describe('voice-utils subscription lifecycle', () => {
       const result = canJoinVoiceChannel(channel, botMember);
 
       expect(result).toBe(false);
+    });
+  });
+
+  describe('attachHealthMonitor', () => {
+    beforeEach(() => {
+      vi.clearAllMocks();
+    });
+
+    it('should create and start a health monitor with correct config', () => {
+      const mockConnection = {
+        state: { status: Voice.VoiceConnectionStatus.Ready },
+        on: vi.fn(),
+      } as any;
+
+      const mockCallback = vi.fn();
+
+      const monitor = attachHealthMonitor(mockConnection, 'test-guild', mockCallback);
+
+      expect(monitor).toBeDefined();
+      expect(mockConnection.on).toHaveBeenCalledWith(
+        Voice.VoiceConnectionStatus.Destroyed,
+        expect.any(Function),
+      );
+    });
+
+    it('should clean up monitor when Destroyed event fires', () => {
+      const mockConnection = {
+        state: { status: Voice.VoiceConnectionStatus.Ready },
+        on: vi.fn(),
+      } as any;
+
+      const mockCallback = vi.fn();
+
+      const monitor = attachHealthMonitor(mockConnection, 'test-guild', mockCallback);
+      const destroySpy = vi.spyOn(monitor, 'destroy');
+
+      // Find and invoke the Destroyed event listener
+      const destroyedHandler = mockConnection.on.mock.calls.find(
+        (call: any) => call[0] === Voice.VoiceConnectionStatus.Destroyed,
+      )?.[1];
+
+      expect(destroyedHandler).toBeDefined();
+      destroyedHandler?.();
+
+      expect(destroySpy).toHaveBeenCalledTimes(1);
+    });
+
+    it('should NOT clean up monitor on Disconnected event', () => {
+      const mockConnection = {
+        state: { status: Voice.VoiceConnectionStatus.Ready },
+        on: vi.fn(),
+      } as any;
+
+      const mockCallback = vi.fn();
+
+      const monitor = attachHealthMonitor(mockConnection, 'test-guild', mockCallback);
+
+      // Verify no Disconnected listener was registered
+      const disconnectedHandler = mockConnection.on.mock.calls.find(
+        (call: any) => call[0] === Voice.VoiceConnectionStatus.Disconnected,
+      );
+
+      expect(disconnectedHandler).toBeUndefined();
     });
   });
 });

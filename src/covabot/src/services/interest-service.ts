@@ -1,7 +1,14 @@
 /**
- * Interest Service - Keyword-based saliency matching
+ * Interest Service — keyword-based message saliency scoring.
  *
- * Replaces Qdrant vector embeddings with simpler keyword matching
+ * Matches incoming message text against a profile's keyword interest list
+ * using word-boundary regex matching, then returns a normalized 0–1 score.
+ * Weights per keyword are persisted in the DB so they can drift over time
+ * via adjustInterestWeight.
+ *
+ * Scoring is deliberately simple: soft ceiling at 3 matched keywords = 1.0,
+ * so a message hitting many keywords doesn't need to match everything to
+ * register as highly relevant.
  */
 
 import { logLayer } from '@starbunk/shared/observability/log-layer';

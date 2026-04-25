@@ -1,71 +1,51 @@
-import { describe, test, expect, vi, beforeAll, afterAll } from 'vitest';
-import { processMessageByStrategy, resetStrategies } from '../../src/strategy/strategy-router';
+import { describe, test, expect, beforeEach, afterEach, vi } from 'vitest';
+import { processMessageByStrategy } from '../../src/strategy/strategy-router';
 import { createMockMessage } from '../helpers/mock-message';
 import { Message, TextChannel } from 'discord.js';
-import { DefaultStrategy } from '../../src/strategy/blue-default-strategy';
-import { BlueRequestStrategy } from '../../src/strategy/blue-request-strategy';
-import { BlueReplyStrategy } from '../../src/strategy/blue-reply-strategy';
-import { beforeEach } from 'node:test';
+import { setupEnemyEnv, setupDiscordService } from '../helpers/test-utils';
 
 describe('Strategy Router', () => {
-	const requestStrategy = new BlueRequestStrategy();
-	const replyStrategy = new BlueReplyStrategy();
-	const defaultStrategy = new DefaultStrategy();
+  const enemyUserId = '999999999999999999';
+  const friendUserId = '111111111111111111';
+  let cleanupEnv: () => void;
 
-	beforeAll(() => {
-		vi.useFakeTimers();
-	});
+  beforeEach(() => {
+    cleanupEnv = setupEnemyEnv(enemyUserId);
+  });
 
-	afterAll(() => {
-		vi.useRealTimers();
-	});
+  afterEach(() => {
+    cleanupEnv();
+  });
 
-	describe('Strategy priority', async () => {
-		beforeEach(async () => {
-			resetStrategies();
-			vi.clearAllMocks();
-			vi.useFakeTimers();
-			vi.setSystemTime(new Date());
+  test('should prioritize enemy insult over compliment request', async () => {
+    const message = createMockMessage({
+      content: 'bluebot say something nice about EnemyNickname',
+      authorId: friendUserId,
+    });
+    setupDiscordService(message);
+    const sendSpy = vi.fn();
+    (message.channel as TextChannel).send = sendSpy;
 
-			const message = createMockMessage({ content: 'blue' });
-			expect(await requestStrategy.shouldRespond(message as Message)).toBe(false);
-			expect(await replyStrategy.shouldRespond(message as Message)).toBe(true);
-			expect(await defaultStrategy.shouldRespond(message as Message)).toBe(true);
-			vi.advanceTimersByTime(1 * 60 * 1000);
-		});
+    await processMessageByStrategy(message as Message);
 
-		test('should prioritize requests over replies', async () => {
-			const message = createMockMessage({ content: 'bluebot say something nice about me' });
-      const sendSpy = vi.fn();
-			(message.channel as TextChannel).send = sendSpy;
-			expect(await requestStrategy.shouldRespond(message as Message)).toBe(true);
-			expect(await replyStrategy.shouldRespond(message as Message)).toBe(true);
+    expect(sendSpy).toHaveBeenCalledTimes(1);
+    expect(sendSpy).toHaveBeenCalledWith('No way, they can suck my blue cane :unamused:');
+  });
 
-			await processMessageByStrategy(message as Message);
+  test('should respond with compliment for friendly request', async () => {
+    const message = createMockMessage({
+      content: 'bluebot say something nice about FriendNickname',
+      authorId: friendUserId,
+    });
+    setupDiscordService(message);
+    const sendSpy = vi.fn();
+    (message.channel as TextChannel).send = sendSpy;
 
-			expect(sendSpy).toHaveBeenCalledWith(`<@${message.author?.id}>, I think you're pretty blue! :wink:`);
-		});
+    await processMessageByStrategy(message as Message);
 
-		test('should prioritize replies over defaults within the time window', async () => {
-      // blue number two
-			let message = createMockMessage({ content: 'blue' });
-			const sendSpy = vi.fn();
-			(message.channel as TextChannel).send = sendSpy;
-			// both are true
-			expect(await replyStrategy.shouldRespond(message as Message)).toBe(true);
-			await processMessageByStrategy(message as Message);
-			// but we're not within the time window, so we go with the default
-			expect(sendSpy).toHaveBeenCalledWith('Did somebody say Blu?');
-
-			vi.advanceTimersByTime(1 * 60 * 1000); // advance 1 minute
-			message = createMockMessage({ content: 'blue' });
-			(message.channel as TextChannel).send = sendSpy;
-			// both are still true
-			expect(await replyStrategy.shouldRespond(message as Message)).toBe(true);
-			expect(await defaultStrategy.shouldRespond(message as Message)).toBe(true);
-			await processMessageByStrategy(message as Message);
-			// now we're in the time window so we go with the reply
-			expect(sendSpy).toHaveBeenCalledWith('Somebody definitely said Blu!');
-		});
-	});
+    expect(sendSpy).toHaveBeenCalledTimes(1);
+    expect(sendSpy).toHaveBeenCalledWith(
+      `<@222222222222222222>, I think you're pretty blue! :wink:`,
+    );
+  });
 });

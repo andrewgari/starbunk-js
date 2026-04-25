@@ -1,15 +1,28 @@
 /**
- * Social Battery Service - Rate limiting with SQLite persistence
+ * Social Battery Service — per-channel rate limiting for natural conversation pacing.
  *
- * Manages message frequency to prevent spam and create natural conversation pacing
+ * Enforces two independent throttles per (profile, channel) pair:
+ *   1. **Window limit**: at most N messages within a rolling time window
+ *   2. **Cooldown**: a minimum gap between consecutive messages
+ *
+ * State is persisted in Postgres so limits survive process restarts.
+ * Direct @mentions bypass rate limits upstream (in ResponseDecisionService)
+ * so the bot always responds when explicitly addressed.
  */
 
 import { logLayer } from '@starbunk/shared/observability/log-layer';
 import { SocialBatteryStateRow, SocialBatteryCheck } from '@/models/memory-types';
 import { SocialBatteryRepository } from '@/repositories/social-battery-repository';
+import { VERBOSE_LOGGING } from '@/utils/verbose-mode';
 
 const logger = logLayer.withPrefix('SocialBatteryService');
 
+/**
+ * Runtime rate-limit config used by this service — camelCase TypeScript convention.
+ * Note: memory-types.ts defines a structurally similar interface also called
+ * SocialBatteryConfig but in snake_case, matching the YAML schema. That one
+ * documents the raw config shape; this one is what callers pass at runtime.
+ */
 export interface SocialBatteryConfig {
   maxMessages: number;
   windowMinutes: number;
@@ -50,20 +63,27 @@ export class SocialBatteryService {
       const secondsSinceLastMessage = (now.getTime() - lastMessage.getTime()) / 1000;
 
       if (secondsSinceLastMessage < config.cooldownSeconds) {
-        logger
-          .withMetadata({
-            profile_id: profileId,
-            channel_id: channelId,
-            seconds_remaining: config.cooldownSeconds - secondsSinceLastMessage,
-          })
-          .debug('Cooldown active');
+        const secondsRemaining = Math.ceil(config.cooldownSeconds - secondsSinceLastMessage);
+        const meta = {
+          profile_id: profileId,
+          channel_id: channelId,
+          cooldown_seconds: config.cooldownSeconds,
+          seconds_remaining: secondsRemaining,
+        };
+        if (VERBOSE_LOGGING) {
+          logger
+            .withMetadata(meta)
+            .info(`Cooldown active — ${secondsRemaining}s remaining before next response`);
+        } else {
+          logger.withMetadata(meta).debug('Cooldown active');
+        }
 
         return {
           canSpeak: false,
           currentCount: state.message_count,
           maxAllowed: config.maxMessages,
           reason: 'cooldown',
-          windowResetSeconds: Math.ceil(config.cooldownSeconds - secondsSinceLastMessage),
+          windowResetSeconds: secondsRemaining,
         };
       }
     }
@@ -89,15 +109,23 @@ export class SocialBatteryService {
           config.windowMinutes * 60 - minutesSinceWindowStart * 60,
         );
 
-        logger
-          .withMetadata({
-            profile_id: profileId,
-            channel_id: channelId,
-            message_count: state.message_count,
-            max_messages: config.maxMessages,
-            window_reset_seconds: windowResetSeconds,
-          })
-          .debug('Rate limited');
+        const meta = {
+          profile_id: profileId,
+          channel_id: channelId,
+          message_count: state.message_count,
+          max_messages: config.maxMessages,
+          window_minutes: config.windowMinutes,
+          window_reset_seconds: windowResetSeconds,
+        };
+        if (VERBOSE_LOGGING) {
+          logger
+            .withMetadata(meta)
+            .info(
+              `Rate limited — sent ${state.message_count}/${config.maxMessages} messages this window, resets in ${windowResetSeconds}s`,
+            );
+        } else {
+          logger.withMetadata(meta).debug('Rate limited');
+        }
 
         return {
           canSpeak: false,

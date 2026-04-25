@@ -1,7 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { Message, User, Client, Guild, GuildMember } from 'discord.js';
 import { MemoryService } from '../../src/services/memory-service';
-import { InterestService } from '../../src/services/interest-service';
 import { SocialBatteryService } from '../../src/services/social-battery-service';
 import {
   ResponseDecisionService,
@@ -10,7 +9,6 @@ import {
 import { PersonalityService } from '../../src/services/personality-service';
 import { ConversationRepository } from '../../src/repositories/conversation-repository';
 import { UserFactRepository } from '../../src/repositories/user-fact-repository';
-import { InterestRepository } from '../../src/repositories/interest-repository';
 import { SocialBatteryRepository } from '../../src/repositories/social-battery-repository';
 import { PersonalityRepository } from '../../src/repositories/personality-repository';
 import { CovaProfile } from '../../src/models/memory-types';
@@ -65,11 +63,9 @@ describe('Message Flow Integration', () => {
   let mockPgService: any;
   let conversationRepository: ConversationRepository;
   let userFactRepository: UserFactRepository;
-  let interestRepository: InterestRepository;
   let socialBatteryRepository: SocialBatteryRepository;
   let personalityRepository: PersonalityRepository;
   let memoryService: MemoryService;
-  let interestService: InterestService;
   let socialBatteryService: SocialBatteryService;
   let decisionService: ResponseDecisionService;
   let personalityService: PersonalityService;
@@ -83,30 +79,13 @@ describe('Message Flow Integration', () => {
       systemPrompt: 'You are a test bot.',
       traits: ['friendly', 'helpful'],
       interests: ['typescript', 'react', 'testing'],
+      topicAffinities: ['typescript', 'react', 'testing'],
+      backgroundFacts: [],
       speechPatterns: { lowercase: true, sarcasmLevel: 0.3, technicalBias: 0.5 },
     },
-    triggers: [
-      {
-        name: 'help-request',
-        conditions: { contains_phrase: 'help me' },
-        use_llm: true,
-      },
-      {
-        name: 'greeting',
-        conditions: { contains_word: 'hello' },
-        use_llm: false,
-        responses: ['Hello there!', 'Hi!'],
-      },
-      {
-        name: 'tech-talk',
-        conditions: {
-          any_of: [{ contains_word: 'typescript' }, { contains_word: 'react' }],
-        },
-        use_llm: true,
-        response_chance: 0.5,
-      },
-    ],
+    nameAliases: ['test bot', 'testbot'],
     socialBattery: { maxMessages: 5, windowMinutes: 10, cooldownSeconds: 30 },
+    memory: { channelWindow: 8 },
     llmConfig: { model: 'gpt-4o-mini', temperature: 0.4, max_tokens: 256 },
     ignoreBots: true,
   };
@@ -119,7 +98,6 @@ describe('Message Flow Integration', () => {
     // Create in-memory stores for mock data
     const conversations: any[] = [];
     const userFacts: any[] = [];
-    const interests: any[] = [];
     const socialBattery: any[] = [];
     const personality: any[] = [];
 
@@ -140,8 +118,6 @@ describe('Message Flow Integration', () => {
             return userFacts.filter(f => f.user_id === params?.[0]);
           }
           return userFacts.filter(f => !params || f.profile_id === params[0]);
-        } else if (sql.includes('covabot_keyword_interests')) {
-          return interests.filter(i => !params || i.profile_id === params[0]);
         } else if (sql.includes('covabot_social_battery')) {
           return socialBattery.filter(s => !params || s.profile_id === params[0]);
         } else if (sql.includes('covabot_personality_evolution')) {
@@ -254,13 +230,6 @@ describe('Message Flow Integration', () => {
                 last_message_at: params?.[3],
               });
               return { rows: [], rowCount: 1 };
-            } else if (sql.includes('covabot_keyword_interests')) {
-              interests.push({
-                profile_id: params?.[0],
-                keyword: params?.[1],
-                interest_level: params?.[2],
-              });
-              return { rows: [], rowCount: 1 };
             }
           }
 
@@ -343,18 +312,14 @@ describe('Message Flow Integration', () => {
 
     conversationRepository = new ConversationRepository(mockPgService);
     userFactRepository = new UserFactRepository(mockPgService);
-    interestRepository = new InterestRepository(mockPgService);
     socialBatteryRepository = new SocialBatteryRepository(mockPgService);
     personalityRepository = new PersonalityRepository(mockPgService);
 
     memoryService = new MemoryService(conversationRepository, userFactRepository);
-    interestService = new InterestService(interestRepository);
     socialBatteryService = new SocialBatteryService(socialBatteryRepository);
     personalityService = new PersonalityService(personalityRepository);
-    decisionService = new ResponseDecisionService(interestService, socialBatteryService);
+    decisionService = new ResponseDecisionService(socialBatteryService);
 
-    // Initialize interests from profile
-    await interestService.initializeFromProfile(mockProfile);
     await personalityService.initializeFromProfile(mockProfile);
   });
 
@@ -390,7 +355,7 @@ describe('Message Flow Integration', () => {
       expect(decision.reason).toBe('ignored');
     });
 
-    it('should respond to direct mentions with LLM', async () => {
+    it('should respond to direct mentions', async () => {
       const message = createMockMessage({
         content: `<@${botUserId}> what do you think?`,
         mentions: [botUserId],
@@ -401,59 +366,9 @@ describe('Message Flow Integration', () => {
 
       expect(decision.shouldRespond).toBe(true);
       expect(decision.reason).toBe('direct_mention');
-      expect(decision.useLlm).toBe(true);
     });
 
-    it('should match pattern trigger without LLM', async () => {
-      const message = createMockMessage({
-        content: 'hello everyone',
-      });
-
-      const ctx: DecisionContext = { profile: mockProfile, message, botUserId };
-      const decision = await decisionService.shouldRespond(ctx);
-
-      expect(decision.shouldRespond).toBe(true);
-      expect(decision.reason).toBe('pattern_trigger');
-      expect(decision.useLlm).toBe(false);
-      expect(decision.patternResponse).toBeDefined();
-      expect(['Hello there!', 'Hi!']).toContain(decision.patternResponse);
-    });
-
-    it('should match pattern trigger with LLM', async () => {
-      const message = createMockMessage({
-        content: 'can you help me with this?',
-      });
-
-      const ctx: DecisionContext = { profile: mockProfile, message, botUserId };
-      const decision = await decisionService.shouldRespond(ctx);
-
-      expect(decision.shouldRespond).toBe(true);
-      expect(decision.reason).toBe('pattern_trigger');
-      expect(decision.useLlm).toBe(true);
-      expect(decision.triggerName).toBe('help-request');
-    });
-
-    it('should respond to interest keywords', async () => {
-      const message = createMockMessage({
-        content: 'I love working with typescript and testing!',
-      });
-
-      const ctx: DecisionContext = { profile: mockProfile, message, botUserId };
-      const decision = await decisionService.shouldRespond(ctx);
-
-      // Note: tech-talk trigger has response_chance, so it might or might not match
-      // But interest matching should work
-      if (decision.reason === 'interest_match') {
-        expect(decision.shouldRespond).toBe(true);
-        expect(decision.useLlm).toBe(true);
-        expect(decision.interestScore).toBeGreaterThan(0);
-      }
-    });
-
-    it('should not respond to uninteresting messages', async () => {
-      // Mock random to prevent random chime
-      vi.spyOn(Math, 'random').mockReturnValue(0.5);
-
+    it('should pass all non-filtered messages to LLM for engagement decision', async () => {
       const message = createMockMessage({
         content: 'what is the weather like today',
       });
@@ -461,33 +376,31 @@ describe('Message Flow Integration', () => {
       const ctx: DecisionContext = { profile: mockProfile, message, botUserId };
       const decision = await decisionService.shouldRespond(ctx);
 
-      expect(decision.shouldRespond).toBe(false);
-      expect(decision.reason).toBe('ignored');
-
-      vi.restoreAllMocks();
+      // No string-pattern matching — LLM decides via IGNORE whether to engage
+      expect(decision.shouldRespond).toBe(true);
+      expect(decision.reason).toBe('llm_response');
     });
 
-    it('should respect social battery rate limit', async () => {
+    it('should respect social battery rate limit for non-trigger messages', async () => {
       const message = createMockMessage({
-        content: 'help me please',
+        content: 'what is the weather like today',
       });
 
-      // Exhaust the social battery
+      // Exhaust the social battery within a single window (no cooldown advancement)
       for (let i = 0; i < 5; i++) {
         await socialBatteryService.recordMessage(
           mockProfile.id,
           message.channelId,
           mockProfile.socialBattery,
         );
-        vi.advanceTimersByTime(35000); // Wait past cooldown
       }
 
       const ctx: DecisionContext = { profile: mockProfile, message, botUserId };
       const decision = await decisionService.shouldRespond(ctx);
 
-      // Should be blocked due to rate limit (pattern matched but battery depleted)
-      // Actually, pattern triggers bypass interest check but still hit battery check
-      // Let me check the flow...
+      // Battery ceiling reached — non-pattern message should be blocked
+      expect(decision.shouldRespond).toBe(false);
+      expect(decision.reason).toBe('ignored');
     });
   });
 

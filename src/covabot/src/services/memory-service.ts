@@ -1,5 +1,13 @@
 /**
- * Memory Service - Manages conversation history and learned user facts
+ * Memory Service — manages conversation history and learned user facts.
+ *
+ * Owns two repositories:
+ * - ConversationRepository: stores and retrieves per-channel message history
+ * - UserFactRepository: stores inferred facts about specific users (interests,
+ *   preferences, relationship notes)
+ *
+ * Also provides formatting helpers that convert raw DB rows into the plain-text
+ * strings the LLM expects as context.
  */
 
 import { logLayer } from '@starbunk/shared/observability/log-layer';
@@ -94,20 +102,29 @@ export class MemoryService {
   }
 
   /**
-   * Get all facts about a user
+   * Get all facts known about a user.
+   *
+   * Note: user facts are stored globally per user, not scoped to a profile.
+   * The `profileId` parameter is accepted for interface symmetry but is not
+   * forwarded to the repository — facts learned by any profile are shared.
    */
   async getUserFacts(profileId: string, userId: string): Promise<UserFact[]> {
+    void profileId; // facts are user-scoped, not profile-scoped
     return await this.userFactRepo.getUserFacts(userId);
   }
 
   /**
-   * Get facts of a specific type for a user
+   * Get facts of a specific type for a user.
+   *
+   * Same scoping note as getUserFacts: `profileId` is unused; facts are
+   * shared across all profiles for a given userId.
    */
   async getUserFactsByType(
     profileId: string,
     userId: string,
     factType: 'interest' | 'relationship' | 'preference',
   ): Promise<UserFact[]> {
+    void profileId; // facts are user-scoped, not profile-scoped
     return await this.userFactRepo.getUserFactsByType(userId, factType);
   }
 

@@ -42,7 +42,10 @@ describe('BlueBot E2E Tests', () => {
 
   describe('Nice requests', () => {
     test('should respond to "say something nice" request', async () => {
-      const response = await harness.sendMessage('bluebot say something nice about Alice', friendUserId);
+      const response = await harness.sendMessage(
+        'bluebot say something nice about Alice',
+        friendUserId,
+      );
       expect(response).toBeTruthy();
       expect(response).toContain('Alice');
     });
@@ -55,4 +58,3 @@ describe('BlueBot E2E Tests', () => {
     });
   });
 });
-

@@ -36,7 +36,7 @@ export interface ModelManagerConfig {
   pullTimeoutMs: number;
   /** Interval for scheduled model updates in ms (default: 7 days) */
   updateIntervalMs?: number;
-  /** Enable scheduled model updates (default: true if OLLAMA_SCHEDULED_UPDATES !== 'false') */
+  /** Enable scheduled model updates (default: true if LOCAL_LLM_SCHEDULED_UPDATES !== 'false') */
   enableScheduledUpdates?: boolean;
 }
 
@@ -54,16 +54,16 @@ export class OllamaModelManager {
   private updateTimer: NodeJS.Timeout | null = null;
 
   constructor(config?: Partial<ModelManagerConfig>) {
-    this.apiUrl = config?.apiUrl || process.env.OLLAMA_API_URL || 'http://127.0.0.1:11434';
+    this.apiUrl = config?.apiUrl || process.env.LOCAL_LLM_API_KEY || 'http://127.0.0.1:11434';
     this.autoPullEnabled =
-      config?.autoPullModels ?? process.env.OLLAMA_AUTO_PULL_MODELS !== 'false';
+      config?.autoPullModels ?? process.env.LOCAL_LLM_AUTO_PULL_MODELS !== 'false';
     this.pullTimeoutMs =
-      config?.pullTimeoutMs ?? parseInt(process.env.OLLAMA_PULL_TIMEOUT_MS || '1200000', 10);
+      config?.pullTimeoutMs ?? parseInt(process.env.LOCAL_LLM_PULL_TIMEOUT_MS || '1200000', 10);
     this.updateIntervalMs =
       config?.updateIntervalMs ??
-      parseInt(process.env.OLLAMA_UPDATE_INTERVAL_MS || String(DEFAULT_UPDATE_INTERVAL_MS), 10);
+      parseInt(process.env.LOCAL_LLM_UPDATE_INTERVAL_MS || String(DEFAULT_UPDATE_INTERVAL_MS), 10);
     this.enableScheduledUpdates =
-      config?.enableScheduledUpdates ?? process.env.OLLAMA_SCHEDULED_UPDATES !== 'false';
+      config?.enableScheduledUpdates ?? process.env.LOCAL_LLM_SCHEDULED_UPDATES !== 'false';
   }
 
   /**
@@ -205,7 +205,7 @@ export class OllamaModelManager {
    * Pull models on startup (non-blocking)
    */
   pullOnStartup(models: string[]): void {
-    if (process.env.OLLAMA_PULL_ON_STARTUP === 'false') {
+    if (process.env.LOCAL_LLM_PULL_ON_STARTUP === 'false') {
       logger.debug('Startup model pull disabled');
       return;
     }

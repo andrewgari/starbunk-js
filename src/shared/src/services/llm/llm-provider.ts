@@ -1,8 +1,10 @@
 /**
- * LLM Provider Interface
+ * Shared LLM provider interface and associated types.
  *
- * Defines the contract for LLM providers (Ollama, Gemini, OpenAI).
- * All providers must implement this interface for consistent usage.
+ * All LLM providers (Ollama, OpenAI, etc.) implement LlmProvider so callers
+ * can generate completions without knowing which backend is in use.
+ * LlmProviderManager selects and sequences providers; consumers only see this
+ * interface and the message/result types defined here.
  */
 
 export interface LlmMessage {
@@ -11,7 +13,7 @@ export interface LlmMessage {
 }
 
 export interface LlmCompletionOptions {
-  model: string;
+  model?: string;
   temperature?: number;
   maxTokens?: number;
 }
@@ -41,18 +43,32 @@ export interface LlmProvider {
 }
 
 /**
- * Configuration for LLM providers
+ * Configuration passed to LlmProviderManager to initialise all providers.
+ *
+ * Provider priority (first configured wins, then falls back):
+ *   1. Ollama   — OLLAMA_BASE_URL (no API key needed)
+ *   2. Anthropic — ANTHROPIC_API_KEY
+ *   3. Gemini   — GEMINI_API_KEY
+ *   4. OpenAI   — OPENAI_API_KEY (legacy: CLOUD_LLM_API_KEY)
+ *
+ * Fields are optional — providers whose key/URL is absent will be skipped.
  */
 export interface LlmProviderConfig {
-  // Ollama
-  ollamaApiUrl?: string;
+  // Ollama (local, no API key required)
+  ollamaBaseUrl?: string;
   ollamaDefaultModel?: string;
-
-  // Gemini
+  // Anthropic / Claude
+  anthropicApiKey?: string;
+  anthropicDefaultModel?: string;
+  // Google Gemini
   geminiApiKey?: string;
   geminiDefaultModel?: string;
-
   // OpenAI
   openaiApiKey?: string;
   openaiDefaultModel?: string;
+  // Legacy aliases kept for backward compatibility
+  localLlmApiKey?: string;
+  localLlmDefaultModel?: string;
+  cloudLlmApiKey?: string;
+  cloudLlmDefaultModel?: string;
 }

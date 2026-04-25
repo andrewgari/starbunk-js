@@ -1,13 +1,33 @@
 import { Message } from 'discord.js';
-import { RequestConfirmStrategy } from '@/strategy/blue-request-confirm-strategy';
 import { BlueBotDiscordService } from '@/discord/discord-service';
 import { matchesAnyName } from '@/utils/string-similarity';
 import { logger } from '@/observability/logger';
+import { RequestConfirmStrategy } from '@/strategy/blue-request-confirm-strategy';
 
 export class RequestConfirmEnemyStrategy extends RequestConfirmStrategy {
-  async shouldRespond(message: Message): Promise<boolean> {
-    const enemy = await BlueBotDiscordService.getInstance().getEnemy(message);
-    const subject = this.getRequestedName(message);
+  async shouldTrigger(): Promise<boolean> {
+    const event = this.triggeringEvent!;
+
+    const subject = this.getRequestedName(event);
+    if (!subject) {
+      return false;
+    }
+
+    let enemy: Awaited<
+      ReturnType<ReturnType<typeof BlueBotDiscordService.getInstance>['getEnemy']>
+    >;
+    try {
+      enemy = await BlueBotDiscordService.getInstance().getEnemy(event);
+    } catch (error) {
+      logger
+        .withError(error)
+        .withMetadata({
+          strategy_name: 'RequestConfirmEnemyStrategy',
+          message_id: this.triggeringEvent!.id,
+        })
+        .warn('RequestConfirmEnemyStrategy: Enemy lookup failed');
+      return false;
+    }
 
     logger
       .withMetadata({
@@ -16,7 +36,7 @@ export class RequestConfirmEnemyStrategy extends RequestConfirmStrategy {
         enemy_id: process.env.BLUEBOT_ENEMY_USER_ID,
         enemy_nickname: enemy.nickname,
         enemy_username: enemy.user.username,
-        message_id: message.id,
+        message_id: this.triggeringEvent!.id,
       })
       .debug('RequestConfirmEnemyStrategy: Checking if request is about enemy');
 
@@ -30,7 +50,7 @@ export class RequestConfirmEnemyStrategy extends RequestConfirmStrategy {
           match_type: 'user_mention',
           subject,
           enemy_id: process.env.BLUEBOT_ENEMY_USER_ID,
-          message_id: message.id,
+          message_id: this.triggeringEvent!.id,
         })
         .info('RequestConfirmEnemyStrategy: Matched - request about enemy via mention');
       return true;
@@ -46,7 +66,7 @@ export class RequestConfirmEnemyStrategy extends RequestConfirmStrategy {
           subject,
           enemy_nickname: enemy.nickname,
           enemy_username: enemy.user.username,
-          message_id: message.id,
+          message_id: this.triggeringEvent!.id,
         })
         .info('RequestConfirmEnemyStrategy: Matched - request about enemy via name');
       return true;
@@ -56,15 +76,15 @@ export class RequestConfirmEnemyStrategy extends RequestConfirmStrategy {
       .withMetadata({
         strategy_name: 'RequestConfirmEnemyStrategy',
         subject,
-        message_id: message.id,
+        message_id: this.triggeringEvent!.id,
       })
       .debug('RequestConfirmEnemyStrategy: No match - not about enemy');
 
     return false;
   }
 
-  async getResponse(message: Message): Promise<string> {
-    const subject = this.getRequestedName(message);
+  async getResponse(_context: Message): Promise<string> {
+    const subject = this.getRequestedName(this.triggeringEvent!);
     const response = 'No way, they can suck my blue cane :unamused:';
 
     logger
@@ -72,7 +92,7 @@ export class RequestConfirmEnemyStrategy extends RequestConfirmStrategy {
         strategy_name: 'RequestConfirmEnemyStrategy',
         subject,
         response,
-        message_id: message.id,
+        message_id: this.triggeringEvent!.id,
       })
       .warn('RequestConfirmEnemyStrategy: Generating insult response for enemy');
 
@@ -84,7 +104,7 @@ export class RequestConfirmEnemyStrategy extends RequestConfirmStrategy {
     }
 
     // Check if subject matches enemy's nickname or username using fuzzy matching
-    const enemy = await BlueBotDiscordService.getInstance().getEnemy(message);
+    const enemy = await BlueBotDiscordService.getInstance().getEnemy(this.triggeringEvent!);
     if (matchesAnyName(subject, [enemy.nickname, enemy.user.username])) {
       return Promise.resolve(response);
     }
@@ -93,7 +113,7 @@ export class RequestConfirmEnemyStrategy extends RequestConfirmStrategy {
       .withMetadata({
         strategy_name: 'RequestConfirmEnemyStrategy',
         subject,
-        message_id: message.id,
+        message_id: this.triggeringEvent!.id,
       })
       .error('RequestConfirmEnemyStrategy: getResponse called but no match found');
 

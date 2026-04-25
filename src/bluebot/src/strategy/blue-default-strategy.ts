@@ -1,11 +1,15 @@
 import { Message } from 'discord.js';
-import { BlueStrategy } from '@/strategy/blue-strategy';
+import { SendAPIMessageStrategy } from '@starbunk/shared/strategy/send-api-message-strategy';
 import { logger } from '@/observability/logger';
 
-export class DefaultStrategy implements BlueStrategy {
-  private blueRegex = /\b(blue?|blue?bot|bl(o+)|azul|blau|bl(u+)|blew)\b/i;
+export class DefaultStrategy extends SendAPIMessageStrategy {
+  readonly name = 'DefaultStrategy';
+  readonly priority = 100;
 
-  shouldRespond(message: Message): Promise<boolean> {
+  private blueRegex = /\b(blue?|blue?bot|bl(o+)|azul|blau|bl(u+)|blew)\b/i;
+  private currentMessage: Message | null = null;
+
+  shouldTrigger(message: Message): Promise<boolean> {
     const matches = this.blueRegex.test(message.content);
     const matchedText = message.content.match(this.blueRegex)?.[0];
 
@@ -20,6 +24,7 @@ export class DefaultStrategy implements BlueStrategy {
       .debug(`DefaultStrategy: Regex evaluation`);
 
     if (matches) {
+      this.currentMessage = message;
       logger
         .withMetadata({
           strategy_name: 'DefaultStrategy',
@@ -33,13 +38,13 @@ export class DefaultStrategy implements BlueStrategy {
     return Promise.resolve(false);
   }
 
-  getResponse(_message: Message): Promise<string> {
+  getResponse(_context: Message): Promise<string> {
     const response = 'Did somebody say Blu?';
     logger
       .withMetadata({
         strategy_name: 'DefaultStrategy',
         response,
-        message_id: _message.id,
+        message_id: this.currentMessage?.id,
       })
       .info('DefaultStrategy: Generating default response');
     return Promise.resolve(response);

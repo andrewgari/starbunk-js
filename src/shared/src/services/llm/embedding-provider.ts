@@ -37,13 +37,13 @@ export interface EmbeddingProvider {
  * Configuration for embedding providers
  */
 export interface EmbeddingProviderConfig {
-  // Ollama (local, free)
-  ollamaApiUrl?: string;
-  ollamaEmbeddingModel?: string;
+  // Local LLM (e.g., Ollama, free)
+  localLlmApiKey?: string;
+  localLlmEmbeddingModel?: string;
 
-  // OpenAI (cloud, paid)
-  openaiApiKey?: string;
-  openaiEmbeddingModel?: string;
+  // Cloud LLM (e.g., OpenAI, paid)
+  cloudLlmApiKey?: string;
+  cloudLlmEmbeddingModel?: string;
 }
 
 /**

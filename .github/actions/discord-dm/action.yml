@@ -1,0 +1,59 @@
+name: Send Discord DM
+description: >
+  Send a Direct Message to a specific user via the Discord bot API.
+  Never posts to any guild channel.
+  Fails silently (continue-on-error friendly) so notification errors
+  never block the parent workflow.
+
+inputs:
+  bot_token:
+    description: Discord bot token (the "Bot " prefix is added automatically)
+    required: true
+  user_id:
+    description: Target Discord user ID (enable Developer Mode → right-click username → Copy User ID)
+    required: true
+  message:
+    description: Message text to send (supports Discord markdown)
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - name: Send Discord DM
+      shell: bash
+      env:
+        BOT_TOKEN: ${{ inputs.bot_token }}
+        USER_ID: ${{ inputs.user_id }}
+        MESSAGE: ${{ inputs.message }}
+      run: |
+        # Skip silently if either required value is missing
+        if [ -z "${BOT_TOKEN}" ] || [ -z "${USER_ID}" ]; then
+          echo "::warning::discord-dm: BOT_TOKEN or USER_ID not set — skipping notification"
+          exit 0
+        fi
+
+        # Open (or reuse) a DM channel with the target user
+        CHANNEL_RESPONSE=$(curl -sf -X POST \
+          -H "Authorization: Bot ${BOT_TOKEN}" \
+          -H "Content-Type: application/json" \
+          -d "{\"recipient_id\":\"${USER_ID}\"}" \
+          https://discord.com/api/v10/users/@me/channels 2>&1) || {
+          echo "::warning::discord-dm: failed to open DM channel (non-fatal)"
+          exit 0
+        }
+
+        CHANNEL_ID=$(echo "$CHANNEL_RESPONSE" | jq -r '.id // empty')
+        if [ -z "$CHANNEL_ID" ]; then
+          echo "::warning::discord-dm: could not extract channel ID from response: $CHANNEL_RESPONSE"
+          exit 0
+        fi
+
+        # JSON-encode the message so special characters are safe
+        MESSAGE_JSON=$(printf '%s' "$MESSAGE" | jq -Rs '.')
+
+        curl -sf -X POST \
+          -H "Authorization: Bot ${BOT_TOKEN}" \
+          -H "Content-Type: application/json" \
+          --data "{\"content\":${MESSAGE_JSON}}" \
+          "https://discord.com/api/v10/channels/${CHANNEL_ID}/messages" || \
+          echo "::warning::discord-dm: failed to send message (non-fatal)"

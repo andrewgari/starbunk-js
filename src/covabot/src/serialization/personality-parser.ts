@@ -2,15 +2,18 @@ import * as path from 'path';
 import * as yaml from 'js-yaml';
 import { logLayer } from '@starbunk/shared/observability/log-layer';
 import type { CovaProfile } from '@/models/memory-types';
+import { VERBOSE_LOGGING } from '@/utils/verbose-mode';
 import {
-  isYamlFile,
   readDirectory,
   directoryExists,
+  isDirectory,
+  fileExists,
   createDirectory,
   readFileUtf8,
 } from './file-reader';
 import { validateOrThrow } from './personality-validator';
 import { mapToCovaProfile } from './personality-mapper';
+import { deepFreeze } from './deep-freeze';
 
 const logger = logLayer.withPrefix('PersonalityParser');
 
@@ -83,6 +86,98 @@ export function parsePersonalityFile(filePath: string): CovaProfile {
   return mapToCovaProfile(validated);
 }
 
+/**
+ * Markdown files loaded in order to assemble the system prompt.
+ * Files that don't exist are silently skipped.
+ * core.md provides the base persona; the rest add structured context.
+ */
+const PERSONALITY_SECTIONS: Array<{ file: string; heading: string }> = [
+  { file: 'core.md', heading: '' },
+  { file: 'speech.md', heading: '## Speech Style' },
+  { file: 'likes.md', heading: '## Things I Like' },
+  { file: 'dislikes.md', heading: '## Things I Dislike' },
+  { file: 'opinions.md', heading: '## My Opinions' },
+  { file: 'beliefs.md', heading: '## Things I Believe' },
+];
+
+/**
+ * Read markdown personality files from a directory and assemble them into
+ * a single system prompt string. Returns empty string if no files are found.
+ */
+function loadMarkdownSystemPrompt(dirPath: string): string {
+  const sections: string[] = [];
+  const loaded: string[] = [];
+  const skipped: string[] = [];
+
+  for (const { file, heading } of PERSONALITY_SECTIONS) {
+    const filePath = path.join(dirPath, file);
+    if (!fileExists(filePath)) {
+      skipped.push(file);
+      continue;
+    }
+
+    const content = readFileUtf8(filePath).trim();
+    if (!content) {
+      skipped.push(`${file} (empty)`);
+      continue;
+    }
+
+    sections.push(heading ? `${heading}\n${content}` : content);
+    loaded.push(file);
+  }
+
+  if (VERBOSE_LOGGING) {
+    logger
+      .withMetadata({ dir: path.basename(dirPath), loaded, skipped })
+      .info('Markdown personality files loaded');
+  } else if (skipped.length > 0) {
+    logger
+      .withMetadata({ dir: path.basename(dirPath), skipped })
+      .debug('Some personality markdown files not found (optional)');
+  }
+
+  return sections.join('\n\n');
+}
+
+/**
+ * Load a single personality from a directory containing profile.yml and optional markdown files.
+ * Markdown files take precedence over the system_prompt field in profile.yml.
+ */
+export function loadPersonalityFromDirectory(dirPath: string): CovaProfile {
+  const profileFilePath = path.join(dirPath, 'profile.yml');
+  const baseProfile = parsePersonalityFile(profileFilePath);
+
+  const markdownPrompt = loadMarkdownSystemPrompt(dirPath);
+  if (!markdownPrompt) {
+    return baseProfile;
+  }
+
+  // Overlay the markdown-assembled system prompt onto the frozen base profile
+  return deepFreeze({
+    ...baseProfile,
+    personality: {
+      ...baseProfile.personality,
+      systemPrompt: markdownPrompt,
+    },
+  }) as unknown as CovaProfile;
+}
+
+/**
+ * Load all personality profiles from a directory.
+ *
+ * Convention: each personality is a subdirectory containing a `profile.yml`
+ * and optional markdown files.
+ * Example:
+ *   personalities/
+ *     cova/
+ *       profile.yml
+ *       core.md
+ *       likes.md
+ *       ...
+ *
+ * The subdirectory name is the deployer's identifier — the display name and
+ * character details are defined inside profile.yml and the markdown files.
+ */
 export function loadPersonalitiesFromDirectory(dirPath: string): CovaProfile[] {
   if (!directoryExists(dirPath)) {
     try {
@@ -94,28 +189,36 @@ export function loadPersonalitiesFromDirectory(dirPath: string): CovaProfile[] {
     return [];
   }
 
-  let files: string[] = [];
+  let entries: string[] = [];
   try {
-    files = readDirectory(dirPath);
+    entries = readDirectory(dirPath);
   } catch (_err) {
     throw new PersonalityParserError(`Unable to read directory: ${dirPath}`);
   }
 
   const profiles: CovaProfile[] = [];
-  for (const file of files) {
-    if (!isYamlFile(file)) continue;
-    const filePath = path.join(dirPath, file);
+
+  for (const entry of entries) {
+    const entryPath = path.join(dirPath, entry);
+
+    // Each personality lives in its own subdirectory with a profile.yml inside
+    if (!isDirectory(entryPath)) continue;
+
+    const profileFilePath = path.join(entryPath, 'profile.yml');
+    if (!fileExists(profileFilePath)) continue;
+
     try {
-      const profile = parsePersonalityFile(filePath);
+      const profile = loadPersonalityFromDirectory(entryPath);
       profiles.push(profile);
-      logger.withMetadata({ file, profileId: profile.id }).info('Loaded personality');
+      logger.withMetadata({ dir: entry, profileId: profile.id }).info('Loaded personality');
     } catch (error) {
       logger
         .withError(error)
-        .withMetadata({ file, path: filePath })
-        .error('Failed to load personality file');
+        .withMetadata({ dir: entry, path: profileFilePath })
+        .error('Failed to load personality');
     }
   }
+
   return profiles;
 }
 

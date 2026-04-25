@@ -22,7 +22,14 @@ vi.mock('../src/observability/logger', () => ({
     warn: vi.fn(),
     error: vi.fn(),
     withError: vi.fn().mockReturnThis(),
+    withMetadata: vi.fn().mockReturnThis(),
   },
+}));
+
+vi.mock('@/observability/djcova-metrics', () => ({
+  getDJCovaMetrics: vi.fn().mockReturnValue({
+    trackPlayCommand: vi.fn(),
+  }),
 }));
 
 vi.mock('../src/utils/discord-utils', () => ({
@@ -135,6 +142,55 @@ describe('Music Commands Tests', () => {
         mockInteraction,
         'Music stopped and disconnected!',
       );
+    });
+
+    it('should defer the interaction immediately to prevent Discord timeout (#606)', async () => {
+      mockInteraction.deferred = false;
+      mockInteraction.replied = false;
+
+      await stopCommand.execute(mockInteraction as ChatInputCommandInteraction);
+
+      // CRITICAL: Defer must be called BEFORE service operations
+      expect(mockInteraction.deferReply).toHaveBeenCalled();
+    });
+
+    it('should not double-defer an already-deferred interaction', async () => {
+      mockInteraction.deferred = true;
+      mockInteraction.replied = false;
+
+      await stopCommand.execute(mockInteraction as ChatInputCommandInteraction);
+
+      // Should NOT call defer if already deferred
+      expect(mockInteraction.deferReply).not.toHaveBeenCalled();
+    });
+
+    it('should not defer an already-replied interaction', async () => {
+      mockInteraction.deferred = false;
+      mockInteraction.replied = true;
+
+      await stopCommand.execute(mockInteraction as ChatInputCommandInteraction);
+
+      // Should NOT call defer if already replied
+      expect(mockInteraction.deferReply).not.toHaveBeenCalled();
+    });
+
+    it('should defer before guild validation to ensure timeout protection', async () => {
+      const callOrder: string[] = [];
+
+      mockInteraction.deferReply = vi.fn(async () => {
+        callOrder.push('defer');
+      });
+
+      mockInteraction.guild = null;
+
+      mockedSendErrorResponse.mockImplementation(async () => {
+        callOrder.push('error-response');
+      });
+
+      await stopCommand.execute(mockInteraction as ChatInputCommandInteraction);
+
+      // Defer MUST come before error response (proves it's called first)
+      expect(callOrder[0]).toBe('defer');
     });
 
     it('should handle stop command without guild gracefully', async () => {

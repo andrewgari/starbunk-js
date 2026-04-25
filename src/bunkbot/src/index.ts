@@ -7,6 +7,8 @@ import { BunkBot } from '@/bunk-bot';
 import { runSmokeTest } from '@starbunk/shared/health/smoke-test';
 import { getMetricsService } from '@starbunk/shared/observability/metrics-service';
 import { initializeHealthServer } from '@starbunk/shared/health/health-server-init';
+import { setApplicationHealth } from '@starbunk/shared/observability/health-server';
+import { notifyStartupIfNewVersion } from '@starbunk/shared/discord/startup-dm';
 
 // Setup logging mixins before any logging occurs
 setupBunkBotLogging();
@@ -67,6 +69,8 @@ async function main() {
   // Create and initialize BunkBot
   const bunkBot = new BunkBot(client, metricsService, healthServer);
   await bunkBot.initialize();
+  setApplicationHealth('healthy');
+  await notifyStartupIfNewVersion(client, 'BunkBot');
 
   // Graceful shutdown
   const shutdown = async (signal: string) => {

@@ -26,7 +26,7 @@ export class OllamaEmbeddingProvider implements EmbeddingProvider {
   private modelManager: OllamaModelManager;
 
   constructor(apiUrl?: string, defaultModel?: string) {
-    this.apiUrl = apiUrl || process.env.OLLAMA_API_URL || 'http://127.0.0.1:11434';
+    this.apiUrl = apiUrl || process.env.LOCAL_LLM_API_KEY || 'http://127.0.0.1:11434';
     this.defaultModel = defaultModel || DEFAULT_EMBEDDING_MODELS.ollama;
     this.modelManager = new OllamaModelManager({ apiUrl: this.apiUrl });
   }

@@ -33,7 +33,6 @@ npm run clean
 #### Running the Application
 
 - `npm run dev` - Run in development mode with hot reload (recommended for development)
-- `npm run dev:watch` - Same as dev (alias for consistency)
 - `npm run start` - Run the pre-built application from dist/
 - `npm run start:prod` - Build and then run the application
 
@@ -43,9 +42,18 @@ npm run clean
 - `npm run build:docker` - Build for Docker (optimized, no source maps)
 - `npm run rebuild` - Clean and rebuild from scratch
 
-#### Utilities
+#### Quality Checks
 
 - `npm run type-check` - Type check without building
+- `npm run lint` - Check code style with ESLint
+- `npm run lint:fix` - Fix code style issues automatically
+- `npm run test` - Run unit tests
+- `npm run test:watch` - Run tests in watch mode
+- `npm run test:ui` - Run tests with UI dashboard
+- `npm run pipeline` - Run all checks: lint, type-check, build, test
+
+#### Utilities
+
 - `npm run clean` - Remove build artifacts
 
 ### Project Structure

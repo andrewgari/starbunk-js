@@ -3,6 +3,7 @@
 # ==========================================
 .DS_Store
 Thumbs.db
+*.txt
 
 # ==========================================
 # IDEs & EDITORS
@@ -137,8 +138,13 @@ data/
 # ARCHIVE DIRECTORIES
 # ==========================================
 archive/
-.archive/
-.github/workflows/archive/
+.archive
+.github/workflows/archive
+.github/commands
+.github/commands/**
+.github/prompts
+.github/prompts/**
+.github/**
 
 # ==========================================
 # PROJECT-SPECIFIC: GITHUB
@@ -160,6 +166,9 @@ docs/github/
 # GitHub Actions credentials
 gha-creds-*.json
 
+
+.continue 
+
 # ==========================================
 # PROJECT-SPECIFIC: CIRCLECI
 # ==========================================
@@ -180,7 +189,7 @@ Untitled-1769734935380.n8n
 .n8n/**
 
 # ==========================================
-# PROJECT-SPECIFIC: AI TOOLS
+# PROJECT-SPECIFIC: AI TOOLS & WORKSPACE
 # ==========================================
 # Gemini
 .gemini/
@@ -188,10 +197,24 @@ Untitled-1769734935380.n8n
 # Auggie/Ralph session logs
 .ralph
 
-# Agent working files
+# AI Workspace - Agent context, PRDs, patterns (local-only, not committed)
+.workspace/
+
+# Local development and runtime data (local-only, not committed)
+local/
+
+# Test results (moved to local/, kept here for legacy)
+test-results/
+
+# Config directory - Bot personalities and settings (local-only, examples in examples/config/ are tracked)
+/config/
+
+# Agent working files (root level - legacy, moving to .workspace/)
 AGENT.md
-PRD.md
 progress.txt
+
+# Current PRD (root level - will be moved to .workspace/prds/)
+PRD.md
 
 # Snyk Security Extension - AI Rules (auto-generated)
 .github/instructions/snyk_rules.instructions.md
@@ -199,16 +222,15 @@ progress.txt
 # ==========================================
 # PROJECT-SPECIFIC: SCRIPTS
 # ==========================================
-# Temporary development and optimization scripts
-scripts/
+# Scripts directory is TRACKED (contains important automation)
+# Exception: exclude nested package scripts
 */scripts
-actionlint
 
-# Exception: CircleCI scripts must be tracked
-!.circleci/scripts/
-!.circleci/scripts/container_health_check.sh
-!.circleci/scripts/detect_changes.sh
-!.circleci/scripts/generate_config.py
+# CircleCI scripts must be tracked (already included in /scripts)
+# No exceptions needed
+
+# Temporary dev tools
+actionlint
 
 # ==========================================
 # PROJECT-SPECIFIC: PRISMA
@@ -226,24 +248,21 @@ actionlint
 # Ignore all markdown by default
 *.md
 
-# But allow these specific docs
+# But allow these specific docs (application documentation)
+!README.markdown
 !README.md
 !SECURITY.md
-!.circleci/README.md
-!docs/DOCKER_ENV_VARS.md
-!docs/AGENTS.md
-!docs/AGENT_WORKFLOW.md
-!docs/branch-protection.md
-!docs/DOCKER_BUILD_OPTIMIZATION.md
-!docs/DOCKER_COMPOSE_AUDIT.md
-!docs/ISSUE_*.md
+!CLAUDE.md
+!src/**/CLAUDE.md
+!.claude/commands/*.md
+# Personality config markdown files (not documentation — loaded as system prompt)
+!src/covabot/config/personalities/**/*.md
 
 # ==========================================
-# TEMPLATE FILES (TRACKED)
+# PROJECT-SPECIFIC: WIKI
 # ==========================================
-!.github/PULL_REQUEST_TEMPLATE.md
-!.github/ISSUE_TEMPLATE/*.md
-!.github/COMMIT_TEMPLATE
+# Local wiki (Obsidian second brain — not committed)
+wiki/
 
 # ==========================================
 # MISC
@@ -263,3 +282,9 @@ lib-cov
 # node-waf configuration
 .lock-wscript
 
+config/**
+.repo_index.json
+tasks.json
+ralph.yml
+ 
+.aider*

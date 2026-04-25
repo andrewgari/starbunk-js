@@ -1,3 +1,238 @@
+## [1.42.0](https://github.com/andrewgari/starbunk-js/compare/v1.41.0...v1.42.0) (2026-04-24)
+
+### Features
+
+* **bots:** send Discord DM when a bot starts after a version update ([#681](https://github.com/andrewgari/starbunk-js/issues/681)) ([e8f8cd2](https://github.com/andrewgari/starbunk-js/commit/e8f8cd28156db705e815ca1045e9d42f11c7c471))
+
+## [1.41.0](https://github.com/andrewgari/starbunk-js/compare/v1.40.0...v1.41.0) (2026-04-24)
+
+### Features
+
+* **ci:** add Discord notifications to CD pipeline ([#677](https://github.com/andrewgari/starbunk-js/issues/677)) ([d271a85](https://github.com/andrewgari/starbunk-js/commit/d271a85474085ca72e6fc6a5990c923d8ed95988))
+
+### Bug Fixes
+
+* **ci:** remove secrets context from workflow if conditions ([#679](https://github.com/andrewgari/starbunk-js/issues/679)) ([e73660c](https://github.com/andrewgari/starbunk-js/commit/e73660cc597e062374704b9b4b5b93fca05b9742))
+
+## [1.40.0](https://github.com/andrewgari/starbunk-js/compare/v1.39.0...v1.40.0) (2026-04-24)
+
+### Features
+
+* **observability:** enhance health servers with bot-specific checks (closes [#670](https://github.com/andrewgari/starbunk-js/issues/670)) ([#676](https://github.com/andrewgari/starbunk-js/issues/676)) ([6f68cc0](https://github.com/andrewgari/starbunk-js/commit/6f68cc0a7bd00d19ca27cd43c09cbbf9a65dad5c))
+
+## [1.39.0](https://github.com/andrewgari/starbunk-js/compare/v1.38.7...v1.39.0) (2026-04-24)
+
+### Features
+
+* **bluebot:** add decision-flow logging to reply and request strategies ([#674](https://github.com/andrewgari/starbunk-js/issues/674)) ([393eba6](https://github.com/andrewgari/starbunk-js/commit/393eba6bb83264efcf03ab57853f7ad877c0b565))
+
+## [1.38.7](https://github.com/andrewgari/starbunk-js/compare/v1.38.6...v1.38.7) (2026-04-24)
+
+### Bug Fixes
+
+* **ci:** remove watchtower from compose, fix deploy workflow ([#673](https://github.com/andrewgari/starbunk-js/issues/673)) ([a717630](https://github.com/andrewgari/starbunk-js/commit/a7176304bff6eb9c5c0e4dbae2a0337ca8367b6f))
+
+## [1.38.6](https://github.com/andrewgari/starbunk-js/compare/v1.38.5...v1.38.6) (2026-04-24)
+
+### Bug Fixes
+
+* **ci:** pull-based deploy via Watchtower (no SSH, no Portainer) ([#672](https://github.com/andrewgari/starbunk-js/issues/672)) ([f2f4266](https://github.com/andrewgari/starbunk-js/commit/f2f4266585e99a4b2d9b35731575c05711fc5a31))
+
+## [1.38.5](https://github.com/andrewgari/starbunk-js/compare/v1.38.4...v1.38.5) (2026-04-24)
+
+### Bug Fixes
+
+* **covabot:** add better-sqlite3 as runtime dependency in shared package ([b101a0f](https://github.com/andrewgari/starbunk-js/commit/b101a0f0b599635a28d87d2b6241940adfd7c237))
+
+## [1.38.4](https://github.com/andrewgari/starbunk-js/compare/v1.38.3...v1.38.4) (2026-04-24)
+
+### Bug Fixes
+
+* **ci:** remove Discord notification from deploy workflow ([2d8488c](https://github.com/andrewgari/starbunk-js/commit/2d8488c92b676db2f81320548bdb7e05bd0f5926))
+
+## [1.38.3](https://github.com/andrewgari/starbunk-js/compare/v1.38.2...v1.38.3) (2026-04-24)
+
+### Bug Fixes
+
+* **ci:** pass env-file to both pull and up steps, fix Discord secret ([7e2680f](https://github.com/andrewgari/starbunk-js/commit/7e2680f1e8af08e298be40c5d5eeec2b33787a7d))
+
+## [1.38.2](https://github.com/andrewgari/starbunk-js/compare/v1.38.1...v1.38.2) (2026-04-24)
+
+### Bug Fixes
+
+* **ci:** replace Portainer webhook with self-hosted runner SSH deploy ([cc885d4](https://github.com/andrewgari/starbunk-js/commit/cc885d4ff4b93d0189828f8f6ad94382e70f2886))
+
+## [1.38.1](https://github.com/andrewgari/starbunk-js/compare/v1.38.0...v1.38.1) (2026-04-23)
+
+### Bug Fixes
+
+* **ci:** add workflow_dispatch and --http1.1 to deploy workflow ([cc06e0c](https://github.com/andrewgari/starbunk-js/commit/cc06e0cec29643c672239f3ea88ffddab1143116))
+
+## [1.38.0](https://github.com/andrewgari/starbunk-js/compare/v1.37.0...v1.38.0) (2026-04-23)
+
+### Features
+
+* **covabot:** add personality generator from Discord message history ([#667](https://github.com/andrewgari/starbunk-js/issues/667)) ([352b84c](https://github.com/andrewgari/starbunk-js/commit/352b84c6efbbe2636b1f50cd83684da1ad454747))
+
+## [1.37.0](https://github.com/andrewgari/starbunk-js/compare/v1.36.2...v1.37.0) (2026-04-23)
+
+### Features
+
+* **health:** add modular health check system ([#671](https://github.com/andrewgari/starbunk-js/issues/671)) ([1e72c4b](https://github.com/andrewgari/starbunk-js/commit/1e72c4b71cd0070ce3f1e2ff879616c44944b983))
+
+## [1.36.2](https://github.com/andrewgari/starbunk-js/compare/v1.36.1...v1.36.2) (2026-04-20)
+
+### Bug Fixes
+
+* **covabot:** fix Ollama model leak and webhook permission fallback ([f35d0a4](https://github.com/andrewgari/starbunk-js/commit/f35d0a43e20367722c7cd2455680f7beef06ee83))
+
+## [1.36.1](https://github.com/andrewgari/starbunk-js/compare/v1.36.0...v1.36.1) (2026-04-20)
+
+### Bug Fixes
+
+* **covabot:** fix LLM provider model fallback and mention response ([#668](https://github.com/andrewgari/starbunk-js/issues/668)) ([2f8081d](https://github.com/andrewgari/starbunk-js/commit/2f8081dec31fc5c0c7091ad0cba4c0629fafde46))
+
+## [1.36.0](https://github.com/andrewgari/starbunk-js/compare/v1.35.0...v1.36.0) (2026-04-19)
+
+### Features
+
+* **covabot:** add Anthropic and Gemini LLM providers ([#666](https://github.com/andrewgari/starbunk-js/issues/666)) ([88f09d3](https://github.com/andrewgari/starbunk-js/commit/88f09d39111ff4b447dd0436b8b83b963da8cc75))
+
+## [1.35.0](https://github.com/andrewgari/starbunk-js/compare/v1.34.4...v1.35.0) (2026-04-19)
+
+### Features
+
+* **covabot:** add verbose logging mode for decision visibility ([#665](https://github.com/andrewgari/starbunk-js/issues/665)) ([592be8e](https://github.com/andrewgari/starbunk-js/commit/592be8ec25d9098d5bcca859bd54913e7e11e17e))
+
+## [1.34.4](https://github.com/andrewgari/starbunk-js/compare/v1.34.3...v1.34.4) (2026-04-17)
+
+### Bug Fixes
+
+* **covabot:** fix ENOTFOUND starbunk-db and false-positive health checks ([#661](https://github.com/andrewgari/starbunk-js/issues/661)) ([008f003](https://github.com/andrewgari/starbunk-js/commit/008f0031f35751289742927b691946f65dc4d85c))
+
+## [1.34.3](https://github.com/andrewgari/starbunk-js/compare/v1.34.2...v1.34.3) (2026-04-17)
+
+### Bug Fixes
+
+* **health:** return 503 during startup to prevent false-positive health checks ([#660](https://github.com/andrewgari/starbunk-js/issues/660)) ([cd61035](https://github.com/andrewgari/starbunk-js/commit/cd61035fa8a7fef7f724402aac0b49e916ab4fe9))
+
+## [1.34.2](https://github.com/andrewgari/starbunk-js/compare/v1.34.1...v1.34.2) (2026-04-17)
+
+### Bug Fixes
+
+* standardize Docker service/container names to fix CovaBot DNS failures ([#659](https://github.com/andrewgari/starbunk-js/issues/659)) ([b571249](https://github.com/andrewgari/starbunk-js/commit/b571249bdf1f83190b7316436bcba8580e71d0de))
+
+## [1.34.1](https://github.com/andrewgari/starbunk-js/compare/v1.34.0...v1.34.1) (2026-04-17)
+
+### Bug Fixes
+
+* remove hardcoded subnet to prevent Portainer address pool conflicts ([#658](https://github.com/andrewgari/starbunk-js/issues/658)) ([a7a182a](https://github.com/andrewgari/starbunk-js/commit/a7a182a2f02fccb4f99deafe6ba1879dbf40c0c7))
+
+## [1.34.0](https://github.com/andrewgari/starbunk-js/compare/v1.33.5...v1.34.0) (2026-04-17)
+
+### Features
+
+* **infra:** full production stack — Redis, Qdrant, Portainer webhook deploy ([#653](https://github.com/andrewgari/starbunk-js/issues/653)) ([5bf4510](https://github.com/andrewgari/starbunk-js/commit/5bf4510c926d070e8bfe0a6c552764c422d2fd06))
+
+## [1.33.5](https://github.com/andrewgari/starbunk-js/compare/v1.33.4...v1.33.5) (2026-04-17)
+
+### Bug Fixes
+
+* **deploy:** remove postgres host port exposure ([#652](https://github.com/andrewgari/starbunk-js/issues/652)) ([bd74ef1](https://github.com/andrewgari/starbunk-js/commit/bd74ef1ef8c67f35ff1fa7bdd5be89419ab7574c))
+
+## [1.33.4](https://github.com/andrewgari/starbunk-js/compare/v1.33.3...v1.33.4) (2026-04-17)
+
+### Bug Fixes
+
+* **deploy:** correct vars.* references and Tailscale input name ([#651](https://github.com/andrewgari/starbunk-js/issues/651)) ([8d5e591](https://github.com/andrewgari/starbunk-js/commit/8d5e591ab6cfa8a75d86d7af18ce564dab58e1fc))
+
+## [1.33.3](https://github.com/andrewgari/starbunk-js/compare/v1.33.2...v1.33.3) (2026-04-17)
+
+### Bug Fixes
+
+* **deploy:** fix race condition and use production environment secrets ([#650](https://github.com/andrewgari/starbunk-js/issues/650)) ([47d9bcb](https://github.com/andrewgari/starbunk-js/commit/47d9bcb7b073eaa5642b4379b1b8f7f7a0585a63))
+
+## [1.33.2](https://github.com/andrewgari/starbunk-js/compare/v1.33.1...v1.33.2) (2026-04-17)
+
+### Bug Fixes
+
+* **deploy:** add Tailscale for LAN production server access ([#649](https://github.com/andrewgari/starbunk-js/issues/649)) ([c60fcf1](https://github.com/andrewgari/starbunk-js/commit/c60fcf1e72059e71d9f42c2c81bd4e71925b9856))
+
+## [1.33.1](https://github.com/andrewgari/starbunk-js/compare/v1.33.0...v1.33.1) (2026-04-17)
+
+### Bug Fixes
+
+* **cd:** configure git identity before creating build tag ([#648](https://github.com/andrewgari/starbunk-js/issues/648)) ([7b26775](https://github.com/andrewgari/starbunk-js/commit/7b2677564b3196f51a8a1f3aa143cc5e93e0eba0))
+
+## [1.33.0](https://github.com/andrewgari/starbunk-js/compare/v1.32.0...v1.33.0) (2026-04-17)
+
+### Features
+
+* **covabot:** organic engagement + personality discipline ([#643](https://github.com/andrewgari/starbunk-js/issues/643)) ([20fe2ac](https://github.com/andrewgari/starbunk-js/commit/20fe2ac11e49e881678840cac0fe31f86c707c6d))
+
+### Bug Fixes
+
+* **covabot:** replace trigger system with LLM-based engagement + fix e2e tests ([#646](https://github.com/andrewgari/starbunk-js/issues/646)) ([df4b008](https://github.com/andrewgari/starbunk-js/commit/df4b0086be192168645a420a133d4dd323377980))
+* **e2e:** gracefully skip suite when Discord env vars are absent ([#647](https://github.com/andrewgari/starbunk-js/issues/647)) ([3c62421](https://github.com/andrewgari/starbunk-js/commit/3c62421c0d4342a227a1ba4e7f2db77e6b02c497))
+
+## [1.32.0](https://github.com/andrewgari/starbunk-js/compare/v1.31.4...v1.32.0) (2026-04-13)
+
+### Features
+
+* **observability:** standardized error codes and DJCova play funnel metrics ([#641](https://github.com/andrewgari/starbunk-js/issues/641)) ([b73d66d](https://github.com/andrewgari/starbunk-js/commit/b73d66d516cda7f006ab617db1c817f530469eb1))
+
+## [1.31.4](https://github.com/andrewgari/starbunk-js/compare/v1.31.3...v1.31.4) (2026-04-11)
+
+### Bug Fixes
+
+* **djcova:** destroy Disconnected connections before retrying voice join ([#640](https://github.com/andrewgari/starbunk-js/issues/640)) ([740f539](https://github.com/andrewgari/starbunk-js/commit/740f5395adb318173985953279e8552600c432c5))
+
+## [1.31.3](https://github.com/andrewgari/starbunk-js/compare/v1.31.2...v1.31.3) (2026-04-10)
+
+### Bug Fixes
+
+* **djcova:** resolve silent playback and reconnection failures ([#639](https://github.com/andrewgari/starbunk-js/issues/639)) ([ce91c46](https://github.com/andrewgari/starbunk-js/commit/ce91c462c76dcdcd9cdbcc4a46eb9ea35c4187b4))
+
+## [1.31.2](https://github.com/andrewgari/starbunk-js/compare/v1.31.1...v1.31.2) (2026-04-10)
+
+### Bug Fixes
+
+* **djcova:** preserve voice subscription across play() calls to fix silent playback ([#638](https://github.com/andrewgari/starbunk-js/issues/638)) ([78d36af](https://github.com/andrewgari/starbunk-js/commit/78d36aff0262c73ee9e88433eae0a4c8ae05d33b))
+
+## [1.31.1](https://github.com/andrewgari/starbunk-js/compare/v1.31.0...v1.31.1) (2026-04-10)
+
+### Bug Fixes
+
+* **djcova:** await voice subscription and register it for cleanup ([#637](https://github.com/andrewgari/starbunk-js/issues/637)) ([1e1ce63](https://github.com/andrewgari/starbunk-js/commit/1e1ce63c139364b0094c252b24853ee9dd2cc2a0))
+
+## [1.31.0](https://github.com/andrewgari/starbunk-js/compare/v1.30.1...v1.31.0) (2026-04-10)
+
+### Features
+
+* Add DJCova integration tests for voice connection lifecycle ([#579](https://github.com/andrewgari/starbunk-js/issues/579)) ([#611](https://github.com/andrewgari/starbunk-js/issues/611)) ([9599997](https://github.com/andrewgari/starbunk-js/commit/95999979398d6105a662d1e7186c22b4350f2e26))
+* **djcova:** Add comprehensive debug logging for music service ([#610](https://github.com/andrewgari/starbunk-js/issues/610)) ([9c45cdf](https://github.com/andrewgari/starbunk-js/commit/9c45cdf6b1a05bb31185e4cd7542b827d35d5aaa))
+* pgvector VectorStore + docker-compose infrastructure (Phase 1 & 3) ([#628](https://github.com/andrewgari/starbunk-js/issues/628)) ([1e939ac](https://github.com/andrewgari/starbunk-js/commit/1e939ac6449f5f490ba1fccf2e62cdea05a39518))
+
+### Bug Fixes
+
+* add health server to CovaBot for Docker health checks ([#629](https://github.com/andrewgari/starbunk-js/issues/629)) ([dfa7ae4](https://github.com/andrewgari/starbunk-js/commit/dfa7ae4cdfcb28677a98b0c1cd22bb39f25c5a03))
+* **djcova:** unpin yt-dlp version to fix music playback ([#635](https://github.com/andrewgari/starbunk-js/issues/635)) ([189c25a](https://github.com/andrewgari/starbunk-js/commit/189c25af4c0f0c88fd3d6dc2de03f76ab71ed512))
+* **djcova:** update yt-dlp to 2026.03.17 and remove dead YouTube dependencies ([#630](https://github.com/andrewgari/starbunk-js/issues/630)) ([ccf840b](https://github.com/andrewgari/starbunk-js/commit/ccf840b5d02a019a90711486e0f6c344a49c96ef))
+* Improve semantic-release error handling and VERSION file management ([#613](https://github.com/andrewgari/starbunk-js/issues/613)) ([04668df](https://github.com/andrewgari/starbunk-js/commit/04668dfb47164589b8dab2c1aa9acba763c2c6d7))
+* **release:** create config/ dir before writing VERSION file ([3ab611f](https://github.com/andrewgari/starbunk-js/commit/3ab611fc4997892cd9955a311643e225ae648f23))
+
+## [1.30.1](https://github.com/andrewgari/starbunk-js/compare/v1.30.0...v1.30.1) (2026-02-01)
+
+### Bug Fixes
+
+* **djcova:** add defer to /stop command to prevent timeout errors ([#606](https://github.com/andrewgari/starbunk-js/issues/606)) ([4d74538](https://github.com/andrewgari/starbunk-js/commit/4d745388402e42e1bf97270a19a0f0a26908dc78))
+
+## [1.30.0](https://github.com/andrewgari/starbunk-js/compare/v1.29.0...v1.30.0) (2026-02-01)
+
+### Features
+
+* add connection health monitoring for DJCova voice connections ([#602](https://github.com/andrewgari/starbunk-js/issues/602)) ([19d7a9f](https://github.com/andrewgari/starbunk-js/commit/19d7a9f43d9809f341c46d55191e27656262b17e))
+
 ## [1.29.0](https://github.com/andrewgari/starbunk-js/compare/v1.28.0...v1.29.0) (2026-01-31)
 
 ### Features

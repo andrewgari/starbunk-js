@@ -6,61 +6,119 @@ type VoiceConnectionLike = ReturnType<typeof joinVoiceChannel>;
 type PlayerSubscriptionLike = ReturnType<VoiceConnectionLike['subscribe']>;
 type AudioPlayerLike = Parameters<VoiceConnectionLike['subscribe']>[0];
 
-type GuildMemberLike = { voice: { channel: VoiceChannelLike | null } };
-
-type VoiceChannelLike = {
+// Minimal type for creating voice connections — does not require permission checks
+type VoiceChannelBasic = {
   id: string;
   name: string;
   guild: { id: string; voiceAdapterCreator: unknown };
+};
+
+type GuildMemberLike = { voice: { channel: VoiceChannelLike | null } };
+
+// Full type including permission checks (used by canJoinVoiceChannel / validateVoiceChannelAccess)
+type VoiceChannelLike = VoiceChannelBasic & {
   permissionsFor(member: GuildMemberLike): { has(perms: string[] | string): boolean } | null;
 };
 
 type InteractionLike = { member?: unknown; guild?: { id: string } | null; channelId: string };
 
-import { getVoiceConnection, VoiceConnectionStatus } from '@discordjs/voice';
+import { getVoiceConnection, VoiceConnectionStatus, entersState } from '@discordjs/voice';
 import { logger } from '../observability/logger';
+import { getMusicConfig } from '../config/music-config';
+import { DJCovaErrorCode } from '../errors';
+import { logError } from '@starbunk/shared/errors';
+import { updateVoiceConnectionStatus, clearGuildState } from '../health/djcova-health';
+import {
+  ConnectionHealthMonitor,
+  ConnectionHealthMonitorConfig,
+  createConnectionHealthMonitor,
+} from '../services/connection-health-monitor';
+import { trace } from '@opentelemetry/api';
 
 /**
  * Join a voice channel and return the connection
  */
 export function createVoiceConnection(
-  channel: VoiceChannelLike,
+  channel: VoiceChannelBasic,
   adapterCreator: unknown,
 ): VoiceConnectionLike {
-  logger.debug(`Joining voice channel: ${channel.name} (${channel.id})`);
+  logger.info(`Attempting to join voice channel: ${channel.name} (${channel.id})`);
+  logger.debug(`Guild: ${channel.guild.id}`);
 
   // Check for existing connection first
   const existingConnection = getVoiceConnection(channel.guild.id);
   if (existingConnection) {
     const currentChannelId = existingConnection.joinConfig?.channelId;
+    const existingStatus = existingConnection.state.status;
     if (currentChannelId === channel.id) {
-      logger.debug(`Reusing existing voice connection for guild ${channel.guild.id}`);
-      return existingConnection;
+      // Only reuse the connection if it is in a state that can still reach Ready.
+      // A Disconnected connection is unusable: returning it causes waitForConnectionReady()
+      // to time out (or see "destroyed") because the Disconnected handler will destroy it
+      // within 5 seconds — leaving the bot visually in the channel but unable to play audio,
+      // and preventing the caller from creating a fresh connection via joinVoiceChannel().
+      if (
+        existingStatus === VoiceConnectionStatus.Ready ||
+        existingStatus === VoiceConnectionStatus.Connecting ||
+        existingStatus === VoiceConnectionStatus.Signalling
+      ) {
+        logger.info(
+          `✅ Reusing existing voice connection (state: ${existingStatus}) for guild ${channel.guild.id}`,
+        );
+        return existingConnection;
+      }
+      logger.warn(
+        `Existing connection for same channel is in unusable state '${existingStatus}'; destroying and recreating`,
+      );
+      // Fall through to destroy + recreate below
+    } else {
+      logger.debug(
+        `Existing connection is in channel ${currentChannelId}; switching to ${channel.id} for guild ${channel.guild.id}`,
+      );
     }
-    logger.debug(
-      `Existing connection is in ${currentChannelId}; switching to ${channel.id} for guild ${channel.guild.id}`,
-    );
     try {
+      logger.debug('Destroying existing connection...');
       existingConnection.destroy();
-    } catch {
-      /* no-op */
+      logger.debug('Existing connection destroyed');
+    } catch (error) {
+      logger
+        .withError(error instanceof Error ? error : new Error(String(error)))
+        .warn('Error destroying existing connection');
     }
   }
+
+  logger.debug('Creating new voice connection...');
   const connection = joinVoiceChannel({
     channelId: channel.id,
     guildId: channel.guild.id,
     adapterCreator: adapterCreator,
   });
+  logger.info(`✅ Voice connection created for channel: ${channel.name}`);
 
   // Set up connection event handlers with improved error handling
+  logger.debug('Setting up voice connection event handlers...');
+
   connection.on(VoiceConnectionStatus.Ready, () => {
     logger.info(`✅ Voice connection ready in channel: ${channel.name}`);
   });
 
   connection.on(VoiceConnectionStatus.Disconnected, async () => {
     logger.warn(`⚠️ Voice connection disconnected from channel: ${channel.name}`);
-    // The library will automatically attempt to reconnect
-    // If it can't reconnect within 5 seconds, it will transition to Destroyed
+    try {
+      // Wait up to 5 seconds to see if the library starts reconnecting on its own.
+      // Promise.any is used so that both entersState() rejections are consumed
+      // internally — the losing promise doesn't surface as an unhandled rejection.
+      await Promise.any([
+        entersState(connection, VoiceConnectionStatus.Signalling, 5_000),
+        entersState(connection, VoiceConnectionStatus.Connecting, 5_000),
+      ]);
+      logger.info(`🔄 Voice connection is reconnecting to channel: ${channel.name}`);
+    } catch {
+      // No reconnect attempt detected (e.g. bot was kicked) — destroy the connection
+      // so getVoiceConnection() returns null on the next /play call and a fresh
+      // connection is created instead of reusing this stale Disconnected one.
+      logger.info(`🔴 No reconnect detected; destroying stale connection for: ${channel.name}`);
+      connection.destroy();
+    }
   });
 
   connection.on(VoiceConnectionStatus.Destroyed, () => {
@@ -76,17 +134,27 @@ export function createVoiceConnection(
   });
 
   connection.on('error', (error: Error) => {
-    logger
-      .withError(error)
-      .withMetadata({ channel_name: channel.name })
-      .error('❌ Voice connection error in channel');
+    logError(
+      logger,
+      DJCovaErrorCode.DJCOVA_VOICE_CONNECTION_LOST,
+      'Voice connection error in channel',
+      {
+        cause: error,
+        channel_name: channel.name,
+        channel_id: channel.id,
+        guild_id: channel.guild.id,
+      },
+    );
   });
 
   connection.on('stateChange', (oldState: { status: string }, newState: { status: string }) => {
     logger.debug(
       `Voice connection state changed: ${oldState.status} -> ${newState.status} for channel: ${channel.name}`,
     );
+    updateVoiceConnectionStatus(channel.guild.id, newState.status);
   });
+
+  logger.debug('Voice connection event handlers registered');
 
   return connection;
 }
@@ -109,32 +177,47 @@ export function disconnectVoiceConnection(guildId: string): void {
       connection.destroy();
       logger.debug(`Voice connection destroyed for guild: ${guildId}`);
     } catch (error) {
-      logger
-        .withError(error instanceof Error ? error : new Error(String(error)))
-        .error('Error destroying voice connection');
+      logError(
+        logger,
+        DJCovaErrorCode.DJCOVA_VOICE_CONNECTION_LOST,
+        'Error destroying voice connection',
+        {
+          cause: error,
+          guild_id: guildId,
+        },
+      );
     }
   }
+  clearGuildState(guildId);
 }
 
 /**
  * Subscribe an audio player to a voice connection
  */
-export function subscribePlayerToConnection(
+export async function subscribePlayerToConnection(
   connection: VoiceConnectionLike,
   player: AudioPlayerLike,
-): PlayerSubscriptionLike | undefined {
+): Promise<PlayerSubscriptionLike | undefined> {
+  logger.debug('Subscribing audio player to voice connection...');
+
   try {
+    await waitForConnectionReady(connection);
     const subscription = connection.subscribe(player);
     if (subscription) {
-      logger.debug('Audio player subscribed to voice connection');
+      logger.info('✅ Audio player subscribed to voice connection');
     } else {
-      logger.warn('Failed to subscribe audio player to voice connection');
+      logger.warn('⚠️ Failed to subscribe audio player to voice connection - returned undefined');
     }
     return subscription;
   } catch (error) {
-    logger
-      .withError(error instanceof Error ? error : new Error(String(error)))
-      .error('Error subscribing player to connection');
+    logError(
+      logger,
+      DJCovaErrorCode.DJCOVA_VOICE_JOIN_FAILED,
+      'Error subscribing player to connection',
+      {
+        cause: error,
+      },
+    );
     return undefined;
   }
 }
@@ -179,6 +262,151 @@ export function validateVoiceChannelAccess(interaction: InteractionLike): {
 }
 
 /**
+ * Asynchronously waits for a voice connection to reach the 'Ready' state.
+ * This is a critical readiness gate to prevent "player attached to not-ready connection" failures.
+ *
+ * Implements a connection readiness gate that:
+ * - Waits up to 5 seconds for the connection to reach Ready state
+ * - Handles race conditions (connection destroyed during wait)
+ * - Provides structured logging with trace IDs
+ * - Exports OpenTelemetry traces for observability
+ *
+ * @param connection The voice connection to monitor.
+ * @param timeoutMs The maximum time to wait in milliseconds (default: 5000ms).
+ * @throws ConnectionNotReadyError if the connection does not become ready within the timeout
+ * @throws ConnectionDestroyedError if the connection is destroyed while waiting
+ */
+export async function waitForConnectionReady(
+  connection: VoiceConnectionLike,
+  timeoutMs = 5000,
+): Promise<void> {
+  const tracer = trace.getTracer('djcova');
+  const startTime = Date.now();
+  const connectionId = `conn_${startTime}_${Math.random().toString(36).substr(2, 9)}`;
+
+  // Start OpenTelemetry span
+  const span = tracer.startSpan('djcova.connection.wait_for_ready', {
+    attributes: {
+      'connection.id': connectionId,
+      'connection.timeout_ms': timeoutMs,
+      'connection.initial_status': connection.state.status,
+    },
+  });
+
+  // Early return if already ready
+  if (connection.state.status === VoiceConnectionStatus.Ready) {
+    const elapsed = Date.now() - startTime;
+    logger
+      .withMetadata({
+        connection_id: connectionId,
+        wait_duration_ms: elapsed,
+        final_state: VoiceConnectionStatus.Ready,
+        trace_id: connectionId,
+      })
+      .debug('Connection already in Ready state');
+
+    span.setAttributes({
+      'connection.result': 'already_ready',
+      'connection.wait_duration_ms': elapsed,
+    });
+    span.end();
+    return;
+  }
+
+  try {
+    logger
+      .withMetadata({
+        connection_id: connectionId,
+        timeout_ms: timeoutMs,
+        current_status: connection.state.status,
+        trace_id: connectionId,
+      })
+      .debug('Waiting for voice connection to reach Ready state');
+
+    // entersState is a utility from @discordjs/voice that resolves when the connection
+    // enters the target state, and rejects if it is destroyed or the timeout is exceeded.
+    await entersState(connection, VoiceConnectionStatus.Ready, timeoutMs);
+
+    const elapsed = Date.now() - startTime;
+    logger
+      .withMetadata({
+        connection_id: connectionId,
+        wait_duration_ms: elapsed,
+        final_state: VoiceConnectionStatus.Ready,
+        timeout_ms: timeoutMs,
+        trace_id: connectionId,
+      })
+      .info('✅ Voice connection reached Ready state');
+
+    span.setAttributes({
+      'connection.result': 'success',
+      'connection.wait_duration_ms': elapsed,
+    });
+    span.end();
+  } catch (error) {
+    const elapsed = Date.now() - startTime;
+    const typedError = error instanceof Error ? error : new Error(String(error));
+    let errorType = 'unknown';
+    let errorMessage = '';
+
+    // Provide a clearer error message for different failure scenarios
+    if (typedError.message.includes('timed out')) {
+      errorType = 'timeout';
+      errorMessage = `Connection did not reach Ready state within ${timeoutMs}ms`;
+      logger
+        .withMetadata({
+          connection_id: connectionId,
+          wait_duration_ms: elapsed,
+          timeout_ms: timeoutMs,
+          final_state: connection.state.status,
+          error_type: errorType,
+          trace_id: connectionId,
+        })
+        .warn(`⏱️ ${errorMessage}`);
+    } else if (typedError.message.includes('destroyed')) {
+      errorType = 'destroyed';
+      errorMessage = 'Connection was destroyed before reaching Ready state';
+      logger
+        .withMetadata({
+          connection_id: connectionId,
+          wait_duration_ms: elapsed,
+          timeout_ms: timeoutMs,
+          final_state: connection.state.status,
+          error_type: errorType,
+          trace_id: connectionId,
+        })
+        .warn(`🔴 ${errorMessage}`);
+    } else {
+      errorType = 'error';
+      errorMessage = `Voice connection failed: ${typedError.message}`;
+      logError(
+        logger,
+        DJCovaErrorCode.DJCOVA_VOICE_JOIN_FAILED,
+        'Voice connection error while waiting for Ready state',
+        {
+          cause: typedError,
+          connection_id: connectionId,
+          wait_duration_ms: elapsed,
+          timeout_ms: timeoutMs,
+          final_state: connection.state.status,
+          error_type: errorType,
+          trace_id: connectionId,
+        },
+      );
+    }
+
+    span.setAttributes({
+      'connection.result': errorType,
+      'connection.error': errorMessage,
+      'connection.wait_duration_ms': elapsed,
+    });
+    span.end();
+
+    throw new Error(errorMessage);
+  }
+}
+
+/**
  * Check if bot has permission to join a voice channel
  */
 export function canJoinVoiceChannel(
@@ -187,4 +415,41 @@ export function canJoinVoiceChannel(
 ): boolean {
   const permissions = channel.permissionsFor(botMember);
   return !!permissions?.has(['Connect', 'Speak']);
+}
+
+/**
+ * Export health monitor types and functions
+ */
+export { ConnectionHealthMonitor, createConnectionHealthMonitor };
+export type { ConnectionHealthMonitorConfig };
+
+/**
+ * Attach health monitor to a voice connection
+ * Automatically cleans up when connection is destroyed
+ */
+export function attachHealthMonitor(
+  connection: VoiceConnectionLike,
+  guildId: string,
+  notificationCallback?: (message: string) => Promise<void>,
+): ConnectionHealthMonitor {
+  const config = getMusicConfig();
+
+  const monitor = createConnectionHealthMonitor({
+    connection,
+    guildId,
+    intervalMs: config.connectionHealthIntervalMs,
+    failureThreshold: config.connectionHealthFailureThreshold,
+    onThresholdExceeded: notificationCallback,
+  });
+
+  // Start health check
+  monitor.start();
+
+  // Add cleanup listener for when connection is permanently destroyed
+  // Note: Do not clean up on Disconnected - the library auto-recovers and the monitor should track failures
+  connection.on(VoiceConnectionStatus.Destroyed, () => {
+    monitor.destroy();
+  });
+
+  return monitor;
 }

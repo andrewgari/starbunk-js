@@ -2,6 +2,9 @@ import { Client, Message } from 'discord.js';
 import { logger } from '@/observability/logger';
 import { processMessageByStrategy } from '@/strategy/strategy-router';
 import { getMetricsService } from '@starbunk/shared/observability/metrics-service';
+import { getBotActivityTracker } from '@starbunk/shared/health/bot-activity-tracker';
+
+const e2eAllowedBotIds = process.env.E2E_ALLOWED_BOT_IDS?.split(',').map(s => s.trim()) ?? [];
 
 export class BlueBot {
   constructor(private readonly client: Client) {}
@@ -9,7 +12,8 @@ export class BlueBot {
   async start(): Promise<void> {
     this.client.on('messageCreate', async (message: Message) => {
       // Basic bot-loop safety: never respond to other bots or self
-      if (message.author.bot) {
+      // E2E_ALLOWED_BOT_IDS allows specific test bots to bypass this filter
+      if (message.author.bot && !e2eAllowedBotIds.includes(message.author.id)) {
         logger
           .withMetadata({
             message_id: message.id,
@@ -22,6 +26,7 @@ export class BlueBot {
       }
 
       const metrics = getMetricsService();
+      getBotActivityTracker('bot_activity').onMessageReceived();
 
       // Track message processing
       if (message.guildId && message.channelId) {
@@ -56,6 +61,7 @@ export class BlueBot {
         if (message.guildId) {
           metrics.trackBotError('BlueBot', 'message_handling_error', message.guildId);
         }
+        getBotActivityTracker('bot_activity').onError('message_handling');
       }
     });
   }

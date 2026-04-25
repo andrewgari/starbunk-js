@@ -1,8 +1,19 @@
 /**
- * LLM Provider Manager
+ * LLM Provider Manager — multi-provider orchestrator with automatic fallback.
  *
- * Manages multiple LLM providers with fallback support.
- * Priority: Ollama (primary) -> Gemini (fallback) -> OpenAI (fallback)
+ * Maintains an ordered list of LlmProvider implementations. On each completion
+ * request, it tries providers in priority order and returns the first success.
+ * If a provider fails, the error is logged and the next provider is tried.
+ * If all providers fail, the last error is re-thrown.
+ *
+ * Default priority (set at construction time):
+ *   1. OllamaProvider    — local, free, private (primary)
+ *   2. AnthropicProvider — Claude models
+ *   3. GeminiProvider    — Google Gemini models
+ *   4. OpenAIProvider    — OpenAI / legacy CLOUD_LLM_API_KEY (final fallback)
+ *
+ * Only providers whose isAvailable() returns true at construction time are
+ * registered, so unconfigured providers are silently skipped.
  */
 
 import { logLayer } from '../../observability/log-layer';
@@ -14,6 +25,7 @@ import {
   LlmCompletionResult,
 } from './llm-provider';
 import { OllamaProvider } from './ollama-provider';
+import { AnthropicProvider } from './anthropic-provider';
 import { GeminiProvider } from './gemini-provider';
 import { OpenAIProvider } from './openai-provider';
 
@@ -30,25 +42,38 @@ export class LlmProviderManager {
    * Initialize providers in priority order
    */
   private initializeProviders(config?: LlmProviderConfig): void {
-    // 1. Ollama (primary - local, free, private)
-    const ollama = new OllamaProvider(config?.ollamaApiUrl, config?.ollamaDefaultModel);
+    // 1. Ollama (local, free, private)
+    const ollama = new OllamaProvider(
+      config?.ollamaBaseUrl || config?.localLlmApiKey,
+      config?.ollamaDefaultModel || config?.localLlmDefaultModel,
+    );
     if (ollama.isAvailable()) {
       this.providers.push(ollama);
-      logger.info('Ollama provider registered (primary)');
+      logger.info('Ollama provider registered');
     }
 
-    // 2. Gemini (first fallback - free tier available)
+    // 2. Anthropic / Claude
+    const anthropic = new AnthropicProvider(config?.anthropicApiKey, config?.anthropicDefaultModel);
+    if (anthropic.isAvailable()) {
+      this.providers.push(anthropic);
+      logger.info('Anthropic provider registered');
+    }
+
+    // 3. Google Gemini
     const gemini = new GeminiProvider(config?.geminiApiKey, config?.geminiDefaultModel);
     if (gemini.isAvailable()) {
       this.providers.push(gemini);
-      logger.info('Gemini provider registered (fallback)');
+      logger.info('Gemini provider registered');
     }
 
-    // 3. OpenAI (second fallback - paid)
-    const openai = new OpenAIProvider(config?.openaiApiKey, config?.openaiDefaultModel);
+    // 4. OpenAI (legacy fallback via OPENAI_API_KEY or CLOUD_LLM_API_KEY)
+    const openai = new OpenAIProvider(
+      config?.openaiApiKey || config?.cloudLlmApiKey,
+      config?.openaiDefaultModel || config?.cloudLlmDefaultModel,
+    );
     if (openai.isAvailable()) {
       this.providers.push(openai);
-      logger.info('OpenAI provider registered (fallback)');
+      logger.info('OpenAI provider registered');
     }
 
     if (this.providers.length === 0) {
@@ -90,10 +115,13 @@ export class LlmProviderManager {
 
     let lastError: Error | null = null;
 
-    for (const provider of this.providers) {
+    for (const [index, provider] of this.providers.entries()) {
       try {
         logger.withMetadata({ provider: provider.name }).debug('Attempting LLM completion');
-        const result = await provider.generateCompletion(messages, options);
+        // For fallback providers (not the primary), strip the requested model so
+        // each provider uses its own default rather than a model name it won't recognise.
+        const effectiveOptions = index === 0 ? options : { ...options, model: undefined };
+        const result = await provider.generateCompletion(messages, effectiveOptions);
         return result;
       } catch (error) {
         lastError = error instanceof Error ? error : new Error(String(error));

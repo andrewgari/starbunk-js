@@ -1,0 +1,144 @@
+name: E2E Tests
+
+on:
+  # Nightly at 06:00 UTC — catches regressions from non-code changes (config, infra, Discord API drift)
+  schedule:
+    - cron: '0 6 * * *'
+  # Manual trigger — useful for debugging or pre-release validation
+  workflow_dispatch:
+
+concurrency:
+  group: e2e
+  cancel-in-progress: false  # never cancel a running E2E — it leaves bots in bad state
+
+# Each app runs as a separate matrix job for clear per-app pass/fail status.
+# max-parallel: 1 ensures sequential execution — all bots share the same Discord
+# tokens so concurrent container startups would cause session conflicts.
+jobs:
+  e2e:
+    name: E2E Tests — ${{ matrix.app }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    strategy:
+      matrix:
+        include:
+          - app: infrastructure
+            test_cmd: test:infra
+          - app: bunkbot
+            test_cmd: test:bunkbot
+          - app: bluebot
+            test_cmd: test:bluebot
+          - app: djcova
+            test_cmd: test:djcova
+          - app: covabot
+            test_cmd: test:covabot
+      max-parallel: 1
+      fail-fast: false
+
+    steps:
+      - uses: actions/checkout@v6
+
+      # ── Secrets preflight ───────────────────────────────────────────────────
+      - name: Preflight — check E2E secrets
+        id: preflight
+        env:
+          TOKEN: ${{ secrets.E2E_DISCORD_SENDER_TOKEN }}
+        run: |
+          if [[ -n "$TOKEN" ]]; then
+            echo "run_e2e=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "::notice title=E2E Skipped::E2E secrets not configured in repository settings — skipping E2E tests."
+            echo "run_e2e=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Setup Node 22
+        if: steps.preflight.outputs.run_e2e == 'true'
+        uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        if: steps.preflight.outputs.run_e2e == 'true'
+        run: npm ci
+
+      # ── Process BunkBot test YAML ───────────────────────────────────────────
+      # Replace the E2E_CI_SENDER_BOT_ID placeholder with the actual bot ID
+      # before the containers start so the mounted config is ready immediately.
+      - name: Process E2E bot config
+        if: steps.preflight.outputs.run_e2e == 'true'
+        run: |
+          mkdir -p e2e-bots-processed
+          E2E_CI_SENDER_BOT_ID="${{ secrets.E2E_DISCORD_SENDER_BOT_ID }}" \
+            envsubst < src/e2e/config/e2e-test-bots.template.yml \
+            > e2e-bots-processed/bots.yml
+          echo "Generated e2e-bots-processed/bots.yml:"
+          cat e2e-bots-processed/bots.yml
+
+      # ── Start bot containers ────────────────────────────────────────────────
+      - name: Start E2E bot containers
+        if: steps.preflight.outputs.run_e2e == 'true'
+        run: docker compose -f docker-compose.e2e.yml up -d
+        env:
+          GITHUB_REPOSITORY_OWNER: ${{ github.repository_owner }}
+          IMAGE_TAG: main
+          E2E_BUNKBOT_TOKEN: ${{ secrets.E2E_BUNKBOT_TOKEN }}
+          E2E_BLUEBOT_TOKEN: ${{ secrets.E2E_BLUEBOT_TOKEN }}
+          E2E_DJCOVA_TOKEN: ${{ secrets.E2E_DJCOVA_TOKEN }}
+          E2E_COVABOT_TOKEN: ${{ secrets.E2E_COVABOT_TOKEN }}
+          E2E_DISCORD_SENDER_BOT_ID: ${{ secrets.E2E_DISCORD_SENDER_BOT_ID }}
+          E2E_DISCORD_ENEMY_BOT_ID: ${{ secrets.E2E_DISCORD_ENEMY_BOT_ID }}
+          E2E_GEMINI_API_KEY: ${{ secrets.E2E_GEMINI_API_KEY }}
+          BLUEBOT_REPLY_WINDOW_MS: "6000"
+
+      # ── Run tests ───────────────────────────────────────────────────────────
+      # Global setup waits for all bots to appear online before running tests.
+      - name: Run E2E tests — ${{ matrix.app }}
+        if: steps.preflight.outputs.run_e2e == 'true'
+        run: cd src/e2e && npm run ${{ matrix.test_cmd }}
+        env:
+          # CI sender (sends test messages)
+          E2E_DISCORD_SENDER_TOKEN: ${{ secrets.E2E_DISCORD_SENDER_TOKEN }}
+          E2E_DISCORD_SENDER_BOT_ID: ${{ secrets.E2E_DISCORD_SENDER_BOT_ID }}
+          # Enemy bot (BlueBot murder tests)
+          E2E_DISCORD_ENEMY_TOKEN: ${{ secrets.E2E_DISCORD_ENEMY_TOKEN }}
+          E2E_DISCORD_ENEMY_BOT_ID: ${{ secrets.E2E_DISCORD_ENEMY_BOT_ID }}
+          # Test guild + channels
+          E2E_DISCORD_TEST_GUILD_ID: ${{ secrets.E2E_DISCORD_TEST_GUILD_ID }}
+          E2E_CHANNEL_INFRASTRUCTURE: ${{ secrets.E2E_CHANNEL_INFRASTRUCTURE }}
+          E2E_CHANNEL_BUNKBOT: ${{ secrets.E2E_CHANNEL_BUNKBOT }}
+          E2E_CHANNEL_BLUEBOT: ${{ secrets.E2E_CHANNEL_BLUEBOT }}
+          E2E_CHANNEL_COVABOT: ${{ secrets.E2E_CHANNEL_COVABOT }}
+          E2E_CHANNEL_DJCOVA: ${{ secrets.E2E_CHANNEL_DJCOVA }}
+          E2E_VOICE_CHANNEL_DJCOVA: ${{ secrets.E2E_VOICE_CHANNEL_DJCOVA }}
+          # Bot user IDs
+          E2E_BUNKBOT_BOT_ID: ${{ secrets.E2E_BUNKBOT_BOT_ID }}
+          E2E_BLUEBOT_BOT_ID: ${{ secrets.E2E_BLUEBOT_BOT_ID }}
+          E2E_COVABOT_BOT_ID: ${{ secrets.E2E_COVABOT_BOT_ID }}
+          E2E_DJCOVA_BOT_ID: ${{ secrets.E2E_DJCOVA_BOT_ID }}
+          # DJCova audio test URL
+          E2E_DJCOVA_TEST_AUDIO_URL: ${{ secrets.E2E_DJCOVA_TEST_AUDIO_URL }}
+          # BlueBot timing windows
+          BLUEBOT_REPLY_WINDOW_MS: "6000"
+
+      # ── Diagnostics on failure ──────────────────────────────────────────────
+      - name: Collect container logs on failure
+        if: failure() && steps.preflight.outputs.run_e2e == 'true'
+        run: |
+          echo "=== BunkBot ===" && docker compose -f docker-compose.e2e.yml logs bunkbot
+          echo "=== BlueBot ===" && docker compose -f docker-compose.e2e.yml logs bluebot
+          echo "=== DJCova ===" && docker compose -f docker-compose.e2e.yml logs djcova
+          echo "=== CovaBot ===" && docker compose -f docker-compose.e2e.yml logs covabot
+
+      - name: Upload test results
+        if: always() && steps.preflight.outputs.run_e2e == 'true'
+        uses: actions/upload-artifact@v7
+        with:
+          name: e2e-${{ matrix.app }}-results
+          path: test-results/e2e.junit.xml
+          if-no-files-found: ignore
+
+      # ── Cleanup ─────────────────────────────────────────────────────────────
+      - name: Stop containers
+        if: always() && steps.preflight.outputs.run_e2e == 'true'
+        run: docker compose -f docker-compose.e2e.yml down -v
