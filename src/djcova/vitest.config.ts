@@ -14,8 +14,13 @@ export default defineConfig({
     environment: 'node',
     globals: true,
     include: ['tests/**/*.test.ts', 'src/**/*.test.ts', 'src/**/__tests__/**/*.test.ts'],
-    // Exclude integration tests from normal test runs
-    exclude: ['tests/**/*.integration.test.ts', 'src/**/*.integration.test.ts'],
+    // Exclude integration and pipeline tests from normal test runs.
+    // Pipeline tests require yt-dlp + network; run them with: npm run test:pipeline
+    exclude: [
+      'tests/**/*.integration.test.ts',
+      'src/**/*.integration.test.ts',
+      'tests/pipeline/**/*.pipeline.test.ts',
+    ],
     coverage: {
       provider: 'v8',
       reporter: ['text', 'lcov', 'html'],
