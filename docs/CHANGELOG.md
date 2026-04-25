@@ -1,3 +1,9 @@
+## [1.43.0](https://github.com/andrewgari/starbunk-js/compare/v1.42.0...v1.43.0) (2026-04-25)
+
+### Features
+
+* **djcova:** pipeline tests + silent-failure observability ([#682](https://github.com/andrewgari/starbunk-js/issues/682)) ([f10b857](https://github.com/andrewgari/starbunk-js/commit/f10b857dbbf09d7d7f2a7148cefd73a292367dca))
+
 ## [1.42.0](https://github.com/andrewgari/starbunk-js/compare/v1.41.0...v1.42.0) (2026-04-24)
 
 ### Features
