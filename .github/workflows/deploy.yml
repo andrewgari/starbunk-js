@@ -1,22 +1,18 @@
 name: Deploy to Production
 
-# Push-based deployment via Tailscale SSH (no SSH key management).
-# On every successful CD run, the runner joins the tailnet using OAuth,
-# then SSHs into Tower via Tailscale SSH to run deploy.sh + health-check.sh.
+# Push-based deployment: runner joins the tailnet via Tailscale OAuth,
+# then SSHs into Tower using a deploy key to run deploy.sh + health-check.sh.
 #
 # Required secrets (production environment):
 #   TS_OAUTH_CLIENT_ID  — Tailscale OAuth client ID (tag:ci)
 #   TS_OAUTH_SECRET     — Tailscale OAuth client secret
-#   SSH_HOST            — Tower's Tailscale hostname or 100.x.x.x IP
+#   SSH_PRIVATE_KEY     — Private key whose public half is in Tower's authorized_keys
+#   SSH_HOST            — Tower's Tailscale IP (100.x.x.x)
 #   SSH_USER            — SSH user on Tower (typically root)
 #
-# Required Tailscale setup:
+# Required Tailscale setup (one-time):
 #   1. Create an OAuth client at tailscale.com/admin/settings/oauth
 #      with the "auth_keys" scope and tag:ci assigned.
-#   2. Enable Tailscale SSH on Tower: `tailscale up --ssh`
-#   3. Add an ACL rule allowing tag:ci to SSH to Tower, e.g.:
-#        { "action": "accept", "src": ["tag:ci"], "dst": ["tag:prod"], "proto": "tcp", "ports": ["22"] }
-#      and tag Tower with tag:prod in the Tailscale admin panel.
 
 on:
   workflow_run:
@@ -50,12 +46,14 @@ jobs:
         env:
           CLIENT_ID: ${{ secrets.TS_OAUTH_CLIENT_ID }}
           CLIENT_SECRET: ${{ secrets.TS_OAUTH_SECRET }}
+          KEY: ${{ secrets.SSH_PRIVATE_KEY }}
           HOST: ${{ secrets.SSH_HOST }}
           USER: ${{ secrets.SSH_USER }}
         run: |
           MISSING=""
           [[ -z "$CLIENT_ID" ]]     && MISSING="$MISSING TS_OAUTH_CLIENT_ID"
           [[ -z "$CLIENT_SECRET" ]] && MISSING="$MISSING TS_OAUTH_SECRET"
+          [[ -z "$KEY" ]]           && MISSING="$MISSING SSH_PRIVATE_KEY"
           [[ -z "$HOST" ]]          && MISSING="$MISSING SSH_HOST"
           [[ -z "$USER" ]]          && MISSING="$MISSING SSH_USER"
           if [[ -n "$MISSING" ]]; then
@@ -73,6 +71,12 @@ jobs:
       - name: Verify connectivity to Tower
         run: tailscale ping --c 3 "${{ secrets.SSH_HOST }}"
 
+      - name: Set up SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+
       - name: Notify — deploy started
         if: vars.DISCORD_NOTIFY_USER_ID != ''
         uses: ./.github/actions/discord-dm
@@ -85,7 +89,8 @@ jobs:
 
       - name: Deploy
         run: |
-          ssh -o StrictHostKeyChecking=accept-new \
+          ssh -i ~/.ssh/deploy_key \
+            -o StrictHostKeyChecking=accept-new \
             -o ConnectTimeout=30 \
             "${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}" \
             "bash -s -- /mnt/user/appdata/starbunk main ${SHORT_SHA}" \
@@ -93,7 +98,8 @@ jobs:
 
       - name: Health check
         run: |
-          ssh -o StrictHostKeyChecking=accept-new \
+          ssh -i ~/.ssh/deploy_key \
+            -o StrictHostKeyChecking=accept-new \
             -o ConnectTimeout=30 \
             "${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}" \
             'bash -s -- /mnt/user/appdata/starbunk' \
