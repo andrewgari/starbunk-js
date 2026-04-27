@@ -1,3 +1,9 @@
+## [1.46.0](https://github.com/andrewgari/starbunk-js/compare/v1.45.1...v1.46.0) (2026-04-27)
+
+### Features
+
+* **ci:** use repo docker-compose.yml and configurable compose dir ([#686](https://github.com/andrewgari/starbunk-js/issues/686)) ([c0ff1ed](https://github.com/andrewgari/starbunk-js/commit/c0ff1ed116f2f92c1bc115522067ec8492aaf23e))
+
 ## [1.45.1](https://github.com/andrewgari/starbunk-js/compare/v1.45.0...v1.45.1) (2026-04-27)
 
 ### Bug Fixes
