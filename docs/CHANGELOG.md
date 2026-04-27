@@ -1,3 +1,15 @@
+## [1.44.0](https://github.com/andrewgari/starbunk-js/compare/v1.43.0...v1.44.0) (2026-04-27)
+
+### Features
+
+* **ci:** replace Watchtower pull-based deploy with SSH push-based deploy ([#683](https://github.com/andrewgari/starbunk-js/issues/683)) ([ce51a05](https://github.com/andrewgari/starbunk-js/commit/ce51a05014004ee0e0de4d3c63e80ea4fa10a280))
+
+## [1.43.0](https://github.com/andrewgari/starbunk-js/compare/v1.42.0...v1.43.0) (2026-04-25)
+
+### Features
+
+* **djcova:** pipeline tests + silent-failure observability ([#682](https://github.com/andrewgari/starbunk-js/issues/682)) ([f10b857](https://github.com/andrewgari/starbunk-js/commit/f10b857dbbf09d7d7f2a7148cefd73a292367dca))
+
 ## [1.42.0](https://github.com/andrewgari/starbunk-js/compare/v1.41.0...v1.42.0) (2026-04-24)
 
 ### Features
