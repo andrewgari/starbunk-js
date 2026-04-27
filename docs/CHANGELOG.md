@@ -1,3 +1,9 @@
+## [1.46.2](https://github.com/andrewgari/starbunk-js/compare/v1.46.1...v1.46.2) (2026-04-27)
+
+### Bug Fixes
+
+* **deploy:** remove stale containers before bringing up new ones ([#690](https://github.com/andrewgari/starbunk-js/issues/690)) ([142c231](https://github.com/andrewgari/starbunk-js/commit/142c2311fe8f009be4f29a6e2d8b35b4085bfb32))
+
 ## [1.46.1](https://github.com/andrewgari/starbunk-js/compare/v1.46.0...v1.46.1) (2026-04-27)
 
 ### Bug Fixes
