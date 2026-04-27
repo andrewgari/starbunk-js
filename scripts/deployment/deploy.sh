@@ -40,9 +40,9 @@ fi
 
 # Check if docker-compose or docker compose is available
 if command -v docker-compose &> /dev/null; then
-  COMPOSE_CMD="docker-compose"
+  COMPOSE_CMD="docker-compose --env-file stack.env"
 elif docker compose version &> /dev/null; then
-  COMPOSE_CMD="docker compose"
+  COMPOSE_CMD="docker compose --env-file stack.env"
 else
   echo "❌ Error: Neither docker-compose nor docker compose is available"
   exit 1
@@ -70,9 +70,9 @@ backup_current_state() {
   BACKUP_DIR="${COMPOSE_DIR}/backups/deployment-$(date +%Y%m%d-%H%M%S)"
   mkdir -p "$BACKUP_DIR"
 
-  # Backup docker-compose.yml and .env
+  # Backup docker-compose.yml and stack.env
   cp docker-compose.yml "$BACKUP_DIR/" 2>/dev/null || true
-  cp .env "$BACKUP_DIR/" 2>/dev/null || true
+  cp stack.env "$BACKUP_DIR/" 2>/dev/null || true
 
   # Save current container list
   $COMPOSE_CMD ps --format json > "$BACKUP_DIR/containers.json" 2>/dev/null || true
