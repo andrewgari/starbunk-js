@@ -1,9 +1,22 @@
 name: Deploy to Production
 
-# Push-based deployment: connects to the production server via Tailscale + SSH,
-# runs deploy.sh to pull the latest images and restart containers, then runs
-# health-check.sh to verify all services are healthy.
-# GitHub's Deployments API is automatically managed via the `environment:` key.
+# Push-based deployment via Tailscale SSH (no SSH key management).
+# On every successful CD run, the runner joins the tailnet using OAuth,
+# then SSHs into Tower via Tailscale SSH to run deploy.sh + health-check.sh.
+#
+# Required secrets (production environment):
+#   TS_OAUTH_CLIENT_ID  — Tailscale OAuth client ID (tag:ci)
+#   TS_OAUTH_SECRET     — Tailscale OAuth client secret
+#   SSH_HOST            — Tower's Tailscale hostname or 100.x.x.x IP
+#   SSH_USER            — SSH user on Tower (typically root)
+#
+# Required Tailscale setup:
+#   1. Create an OAuth client at tailscale.com/admin/settings/oauth
+#      with the "auth_keys" scope and tag:ci assigned.
+#   2. Enable Tailscale SSH on Tower: `tailscale up --ssh`
+#   3. Add an ACL rule allowing tag:ci to SSH to Tower, e.g.:
+#        { "action": "accept", "src": ["tag:ci"], "dst": ["tag:prod"], "proto": "tcp", "ports": ["22"] }
+#      and tag Tower with tag:prod in the Tailscale admin panel.
 
 on:
   workflow_run:
@@ -35,16 +48,16 @@ jobs:
 
       - name: Preflight — check required secrets
         env:
-          KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+          CLIENT_ID: ${{ secrets.TS_OAUTH_CLIENT_ID }}
+          CLIENT_SECRET: ${{ secrets.TS_OAUTH_SECRET }}
           HOST: ${{ secrets.SSH_HOST }}
           USER: ${{ secrets.SSH_USER }}
-          TS_KEY: ${{ secrets.TAILSCALE_AUTHKEY }}
         run: |
           MISSING=""
-          [[ -z "$KEY" ]]    && MISSING="$MISSING SSH_PRIVATE_KEY"
-          [[ -z "$HOST" ]]   && MISSING="$MISSING SSH_HOST"
-          [[ -z "$USER" ]]   && MISSING="$MISSING SSH_USER"
-          [[ -z "$TS_KEY" ]] && MISSING="$MISSING TAILSCALE_AUTHKEY"
+          [[ -z "$CLIENT_ID" ]]     && MISSING="$MISSING TS_OAUTH_CLIENT_ID"
+          [[ -z "$CLIENT_SECRET" ]] && MISSING="$MISSING TS_OAUTH_SECRET"
+          [[ -z "$HOST" ]]          && MISSING="$MISSING SSH_HOST"
+          [[ -z "$USER" ]]          && MISSING="$MISSING SSH_USER"
           if [[ -n "$MISSING" ]]; then
             echo "::error::Missing required secrets:$MISSING"
             exit 1
@@ -53,14 +66,12 @@ jobs:
       - name: Connect to Tailscale
         uses: tailscale/github-action@v3
         with:
-          authkey: ${{ secrets.TAILSCALE_AUTHKEY }}
+          oauth-client-id: ${{ secrets.TS_OAUTH_CLIENT_ID }}
+          oauth-secret: ${{ secrets.TS_OAUTH_SECRET }}
+          tags: tag:ci
 
-      - name: Set up SSH
-        run: |
-          mkdir -p ~/.ssh
-          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/deploy_key
-          chmod 600 ~/.ssh/deploy_key
-          ssh-keyscan -H "${{ secrets.SSH_HOST }}" >> ~/.ssh/known_hosts 2>/dev/null || true
+      - name: Verify connectivity to Tower
+        run: tailscale ping --c 3 "${{ secrets.SSH_HOST }}"
 
       - name: Notify — deploy started
         if: vars.DISCORD_NOTIFY_USER_ID != ''
@@ -74,8 +85,7 @@ jobs:
 
       - name: Deploy
         run: |
-          ssh -i ~/.ssh/deploy_key \
-            -o StrictHostKeyChecking=accept-new \
+          ssh -o StrictHostKeyChecking=accept-new \
             -o ConnectTimeout=30 \
             "${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}" \
             "bash -s -- /mnt/user/appdata/starbunk main ${SHORT_SHA}" \
@@ -83,8 +93,7 @@ jobs:
 
       - name: Health check
         run: |
-          ssh -i ~/.ssh/deploy_key \
-            -o StrictHostKeyChecking=accept-new \
+          ssh -o StrictHostKeyChecking=accept-new \
             -o ConnectTimeout=30 \
             "${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}" \
             'bash -s -- /mnt/user/appdata/starbunk' \
