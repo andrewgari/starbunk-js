@@ -1,3 +1,9 @@
+## [1.45.1](https://github.com/andrewgari/starbunk-js/compare/v1.45.0...v1.45.1) (2026-04-27)
+
+### Bug Fixes
+
+* **ci:** rename Tailscale OAuth secrets to TAILSCALE_OAUTH_CLIENT_ID/SECRET ([#685](https://github.com/andrewgari/starbunk-js/issues/685)) ([06e2bcc](https://github.com/andrewgari/starbunk-js/commit/06e2bcc0d82adb169fa3b822754e71c5bcab16d4))
+
 ## [1.45.0](https://github.com/andrewgari/starbunk-js/compare/v1.44.0...v1.45.0) (2026-04-27)
 
 ### Features
