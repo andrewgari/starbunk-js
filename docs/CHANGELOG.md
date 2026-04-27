@@ -1,3 +1,9 @@
+## [1.46.1](https://github.com/andrewgari/starbunk-js/compare/v1.46.0...v1.46.1) (2026-04-27)
+
+### Bug Fixes
+
+* **docker:** pin compose project name to starbunk ([#687](https://github.com/andrewgari/starbunk-js/issues/687)) ([8fbaed9](https://github.com/andrewgari/starbunk-js/commit/8fbaed99ac9aa05f51210917e2c39b45be2943f9))
+
 ## [1.46.0](https://github.com/andrewgari/starbunk-js/compare/v1.45.1...v1.46.0) (2026-04-27)
 
 ### Features
