@@ -1,9 +1,9 @@
-name: Deploy Production Tag
+name: Deploy to Production
 
-# Deployment is pull-based: Watchtower runs on the production server, polls GHCR
-# every 5 minutes, and restarts containers when new images are detected.
-# This workflow runs on a GitHub-managed runner and only verifies that the
-# expected images are accessible in GHCR before Watchtower picks them up.
+# Push-based deployment: connects to the production server via Tailscale + SSH,
+# runs deploy.sh to pull the latest images and restart containers, then runs
+# health-check.sh to verify all services are healthy.
+# GitHub's Deployments API is automatically managed via the `environment:` key.
 
 on:
   workflow_run:
@@ -12,59 +12,101 @@ on:
     branches: [main]
   workflow_dispatch:
 
+permissions:
+  contents: read
+  deployments: write
+
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false  # never cancel an in-flight deploy
+
 jobs:
-  verify_images:
-    name: Verify GHCR Images
+  deploy:
+    name: Deploy to Production
     runs-on: ubuntu-latest
-    # Only run when triggered by a successful CD workflow, or manually
+    environment: production
     if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
+    timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v4
 
-      - name: Login to GHCR
-        uses: docker/login-action@v3
-        with:
-          registry: ghcr.io
-          username: ${{ github.repository_owner }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Set short SHA
+        run: echo "SHORT_SHA=${GITHUB_SHA:0:7}" >> $GITHUB_ENV
 
-      - name: Verify images are available in GHCR
+      - name: Preflight — check required secrets
+        env:
+          KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+          HOST: ${{ secrets.SSH_HOST }}
+          USER: ${{ secrets.SSH_USER }}
+          TS_KEY: ${{ secrets.TAILSCALE_AUTHKEY }}
         run: |
-          OWNER_LC=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
-          FAILED=0
-          for APP in bunkbot covabot djcova bluebot; do
-            IMAGE="ghcr.io/${OWNER_LC}/${APP}:main"
-            echo "Checking ${IMAGE}..."
-            if docker manifest inspect "${IMAGE}" > /dev/null 2>&1; then
-              echo "  ✓ ${IMAGE} is accessible"
-            else
-              echo "  ✗ ${IMAGE} not found or not accessible"
-              FAILED=1
-            fi
-          done
-          if [ "$FAILED" -eq 1 ]; then
-            echo "One or more images failed verification."
+          MISSING=""
+          [[ -z "$KEY" ]]    && MISSING="$MISSING SSH_PRIVATE_KEY"
+          [[ -z "$HOST" ]]   && MISSING="$MISSING SSH_HOST"
+          [[ -z "$USER" ]]   && MISSING="$MISSING SSH_USER"
+          [[ -z "$TS_KEY" ]] && MISSING="$MISSING TAILSCALE_AUTHKEY"
+          if [[ -n "$MISSING" ]]; then
+            echo "::error::Missing required secrets:$MISSING"
             exit 1
           fi
-          echo "All images verified. Watchtower will pull and redeploy within 5 minutes."
 
-      - name: Notify — deploy queued
+      - name: Connect to Tailscale
+        uses: tailscale/github-action@v3
+        with:
+          authkey: ${{ secrets.TAILSCALE_AUTHKEY }}
+
+      - name: Set up SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan -H "${{ secrets.SSH_HOST }}" >> ~/.ssh/known_hosts 2>/dev/null || true
+
+      - name: Notify — deploy started
+        if: vars.DISCORD_NOTIFY_USER_ID != ''
+        uses: ./.github/actions/discord-dm
+        with:
+          bot_token: ${{ secrets.DISCORD_NOTIFY_TOKEN }}
+          user_id: ${{ vars.DISCORD_NOTIFY_USER_ID }}
+          message: |
+            🚀 **Production deploy started** (`${{ env.SHORT_SHA }}`)
+            — [View deployment](${{ github.server_url }}/${{ github.repository }}/deployments/activity_log?environment=production)
+
+      - name: Deploy
+        run: |
+          ssh -i ~/.ssh/deploy_key \
+            -o StrictHostKeyChecking=accept-new \
+            -o ConnectTimeout=30 \
+            "${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}" \
+            "bash -s -- /mnt/user/appdata/starbunk main ${SHORT_SHA}" \
+            < scripts/deployment/deploy.sh
+
+      - name: Health check
+        run: |
+          ssh -i ~/.ssh/deploy_key \
+            -o StrictHostKeyChecking=accept-new \
+            -o ConnectTimeout=30 \
+            "${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}" \
+            'bash -s -- /mnt/user/appdata/starbunk' \
+            < scripts/deployment/health-check.sh
+
+      - name: Notify — deploy succeeded
         if: success() && vars.DISCORD_NOTIFY_USER_ID != ''
         uses: ./.github/actions/discord-dm
         with:
           bot_token: ${{ secrets.DISCORD_NOTIFY_TOKEN }}
           user_id: ${{ vars.DISCORD_NOTIFY_USER_ID }}
           message: |
-            🟢 **Production deploy queued**
-            All images verified in GHCR. Watchtower will pull and restart containers within **5 minutes**.
+            ✅ **Production deploy succeeded** (`${{ env.SHORT_SHA }}`)
+            All containers running and healthy.
+            — [View deployment](${{ github.server_url }}/${{ github.repository }}/deployments/activity_log?environment=production)
 
-      - name: Notify — verification failed
+      - name: Notify — deploy failed
         if: failure() && vars.DISCORD_NOTIFY_USER_ID != ''
         uses: ./.github/actions/discord-dm
         with:
           bot_token: ${{ secrets.DISCORD_NOTIFY_TOKEN }}
           user_id: ${{ vars.DISCORD_NOTIFY_USER_ID }}
           message: |
-            ❌ **Deploy verification FAILED**
-            One or more images could not be found in GHCR. Watchtower may not deploy the new version.
+            ❌ **Production deploy FAILED** (`${{ env.SHORT_SHA }}`)
             — [View run](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})
