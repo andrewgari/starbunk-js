@@ -1,3 +1,9 @@
+## [1.45.0](https://github.com/andrewgari/starbunk-js/compare/v1.44.0...v1.45.0) (2026-04-27)
+
+### Features
+
+* **ci:** switch to Tailscale OAuth + Tailscale SSH for deployment ([#684](https://github.com/andrewgari/starbunk-js/issues/684)) ([2e469bf](https://github.com/andrewgari/starbunk-js/commit/2e469bfdac290fee808c2f68c4c592e8fbd76ee2))
+
 ## [1.44.0](https://github.com/andrewgari/starbunk-js/compare/v1.43.0...v1.44.0) (2026-04-27)
 
 ### Features
