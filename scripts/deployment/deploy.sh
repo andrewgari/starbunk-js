@@ -112,9 +112,14 @@ pull_images() {
 restart_services() {
   echo "🔄 Restarting services with new images..."
 
-  # Use --force-recreate to ensure containers are rebuilt with new images
-  # Use --no-build to prevent local builds (we want to use pulled images)
-  $COMPOSE_CMD up -d --force-recreate --no-build
+  # Gracefully stop containers owned by this compose project
+  $COMPOSE_CMD down 2>/dev/null || true
+
+  # Force-remove any starbunk containers that weren't owned by this project
+  # (e.g. created under a different project name before the name: field was pinned)
+  docker ps -aq --filter "name=starbunk-" | xargs -r docker rm -f 2>/dev/null || true
+
+  $COMPOSE_CMD up -d --no-build
 
   EXIT_CODE=$?
   if [ $EXIT_CODE -ne 0 ]; then
