@@ -1,4 +1,5 @@
 version: "3.8"
+name: starbunk
 
 # Production deployment using pre-built images from GitHub Container Registry (GHCR)
 # Images are built by CI/CD pipeline and tagged as 'main' for the latest production build
