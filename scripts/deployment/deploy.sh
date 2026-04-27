@@ -5,9 +5,10 @@ set -euo pipefail
 # Runs on Unraid server to pull latest images and restart services
 # Called by CircleCI deploy job via SSH
 
-COMPOSE_DIR="${1:-/mnt/user/appdata/starbunk}"
+COMPOSE_DIR="${1}"
 DEPLOY_TAG="${2:-main}"
 VERSION="${3:-unknown}"
+INCOMING_COMPOSE="${4:-}"  # optional path to a new docker-compose.yml to install after backup
 
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 echo "🚀 Starbunk Production Deployment"
@@ -21,6 +22,11 @@ echo "━━━━━━━━━━━━━━━━━━━━━━━━�
 # Verify compose directory exists
 if [ ! -d "$COMPOSE_DIR" ]; then
   echo "❌ Error: Compose directory not found: $COMPOSE_DIR"
+  exit 1
+fi
+
+if [ -z "$COMPOSE_DIR" ]; then
+  echo "❌ Error: COMPOSE_DIR argument is required"
   exit 1
 fi
 
@@ -73,6 +79,16 @@ backup_current_state() {
 
   echo "✅ Backup saved to: $BACKUP_DIR"
   echo ""
+}
+
+# Install incoming docker-compose.yml (after backup, so backup reflects previous state)
+install_incoming_compose() {
+  if [ -n "$INCOMING_COMPOSE" ] && [ -f "$INCOMING_COMPOSE" ]; then
+    echo "📋 Installing new docker-compose.yml from: $INCOMING_COMPOSE"
+    mv "$INCOMING_COMPOSE" docker-compose.yml
+    echo "✅ docker-compose.yml updated"
+    echo ""
+  fi
 }
 
 # Pull latest images
@@ -155,6 +171,7 @@ check_restart_loops() {
 main() {
   get_current_digests
   backup_current_state
+  install_incoming_compose
   pull_images
   restart_services
   wait_for_stability
