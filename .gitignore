@@ -251,6 +251,7 @@ actionlint
 # But allow these specific docs (application documentation)
 !README.markdown
 !README.md
+!SECURITY.md
 !CLAUDE.md
 !src/**/CLAUDE.md
 !.claude/commands/*.md

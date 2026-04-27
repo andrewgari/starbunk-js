@@ -1,0 +1,158 @@
+name: Security Rescan (Manual)
+
+# 🔒 Manual security rescan workflow
+# Allows developers to trigger Snyk scans without rebuilding the entire application
+# Use this after applying security fixes to verify remediation
+
+on:
+  workflow_dispatch:
+    inputs:
+      scan_type:
+        description: 'Type of scan to run'
+        required: true
+        type: choice
+        options:
+          - 'code-only'
+          - 'containers-only'
+          - 'full-scan'
+        default: 'full-scan'
+      severity_threshold:
+        description: 'Minimum severity level to report'
+        required: false
+        type: choice
+        options:
+          - 'low'
+          - 'medium'
+          - 'high'
+          - 'critical'
+        default: 'high'
+
+jobs:
+  snyk_code_rescan:
+    name: Snyk Code Scan
+    runs-on: ubuntu-latest
+    if: ${{ github.event.inputs.scan_type == 'code-only' || github.event.inputs.scan_type == 'full-scan' }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Snyk CLI
+        run: npm install -g snyk@latest
+
+      - name: Run Snyk Code Scan
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+        run: |
+          snyk auth $SNYK_TOKEN
+          
+          echo "🔍 Running Snyk code scan (severity: ${{ github.event.inputs.severity_threshold }})"
+          snyk test \
+            --all-projects \
+            --severity-threshold=${{ github.event.inputs.severity_threshold }} \
+            --detection-depth=4 \
+            --json > snyk-code-results.json || true
+          
+          echo "📊 Generating HTML report"
+          npm install -g snyk-to-html
+          snyk-to-html -i snyk-code-results.json -o snyk-code-report.html || true
+
+      - name: Upload Snyk Code Report
+        uses: actions/upload-artifact@v4.4.3
+        if: always()
+        with:
+          name: snyk-code-report
+          path: |
+            snyk-code-results.json
+            snyk-code-report.html
+          retention-days: 30
+
+  snyk_container_rescan:
+    name: Snyk Container Scan
+    runs-on: ubuntu-latest
+    if: ${{ github.event.inputs.scan_type == 'containers-only' || github.event.inputs.scan_type == 'full-scan' }}
+    strategy:
+      matrix:
+        app: [bunkbot, djcova, covabot, bluebot]
+      fail-fast: false
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build application
+        run: |
+          npm run build:shared
+          npm run build:${{ matrix.app }}
+
+      - name: Build Docker image
+        run: |
+          docker build -f src/${{ matrix.app }}/Dockerfile.ci -t starbunk-${{ matrix.app }}:scan .
+
+      - name: Install Snyk CLI
+        run: npm install -g snyk@latest
+
+      - name: Run Snyk Container Scan
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+        run: |
+          snyk auth $SNYK_TOKEN
+          
+          echo "🔍 Scanning ${{ matrix.app }} container (severity: ${{ github.event.inputs.severity_threshold }})"
+          snyk container test starbunk-${{ matrix.app }}:scan \
+            --severity-threshold=${{ github.event.inputs.severity_threshold }} \
+            --file=src/${{ matrix.app }}/Dockerfile.ci \
+            --json > snyk-container-${{ matrix.app }}.json || true
+          
+          echo "📊 Generating HTML report"
+          npm install -g snyk-to-html
+          snyk-to-html -i snyk-container-${{ matrix.app }}.json -o snyk-container-${{ matrix.app }}.html || true
+
+      - name: Upload Snyk Container Report
+        uses: actions/upload-artifact@v4.4.3
+        if: always()
+        with:
+          name: snyk-container-report-${{ matrix.app }}
+          path: |
+            snyk-container-${{ matrix.app }}.json
+            snyk-container-${{ matrix.app }}.html
+          retention-days: 30
+
+  summary:
+    name: Scan Summary
+    runs-on: ubuntu-latest
+    needs: [snyk_code_rescan, snyk_container_rescan]
+    if: always()
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4.1.3
+        with:
+          path: scan-results
+
+      - name: Generate Summary
+        run: |
+          echo "# 🔒 Security Rescan Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Scan Type:** ${{ github.event.inputs.scan_type }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Severity Threshold:** ${{ github.event.inputs.severity_threshold }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "## 📊 Artifacts" >> $GITHUB_STEP_SUMMARY
+          echo "HTML reports have been generated and are available in the workflow artifacts." >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Download the artifacts to view detailed vulnerability reports." >> $GITHUB_STEP_SUMMARY
