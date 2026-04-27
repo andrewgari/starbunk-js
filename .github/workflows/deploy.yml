@@ -82,13 +82,13 @@ jobs:
           echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/deploy_key
           chmod 600 ~/.ssh/deploy_key
 
-      - name: Copy docker-compose.yml to Tower
+      - name: Stage docker-compose.yml on Tower
         run: |
           scp -i ~/.ssh/deploy_key \
             -o StrictHostKeyChecking=accept-new \
             -o ConnectTimeout=30 \
             docker-compose.yml \
-            "${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:${{ vars.PROD_DOCKER_COMPOSE_DIR }}/docker-compose.yml"
+            "${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:${{ vars.PROD_DOCKER_COMPOSE_DIR }}/docker-compose.yml.incoming"
 
       - name: Notify — deploy started
         if: vars.DISCORD_NOTIFY_USER_ID != ''
@@ -106,7 +106,7 @@ jobs:
             -o StrictHostKeyChecking=accept-new \
             -o ConnectTimeout=30 \
             "${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}" \
-            "bash -s -- ${{ vars.PROD_DOCKER_COMPOSE_DIR }} main ${SHORT_SHA}" \
+            "bash -s -- ${{ vars.PROD_DOCKER_COMPOSE_DIR }} main ${SHORT_SHA} ${{ vars.PROD_DOCKER_COMPOSE_DIR }}/docker-compose.yml.incoming" \
             < scripts/deployment/deploy.sh
 
       - name: Health check
