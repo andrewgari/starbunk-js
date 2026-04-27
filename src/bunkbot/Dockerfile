@@ -2,7 +2,7 @@
 # Optimized 2-stage build with Alpine Linux (Docker & Podman compatible)
 
 # Stage 1: Builder - Build the application
-FROM node:20-alpine3.20 AS builder
+FROM node:24-alpine3.20 AS builder
 
 WORKDIR /app
 
@@ -34,7 +34,7 @@ COPY src/bunkbot/tsconfig*.json ./src/bunkbot/
 RUN cd src/bunkbot && npm run build:docker
 
 # Stage 2: Runtime - Minimal production image
-FROM node:20-alpine AS runtime
+FROM node:24-alpine AS runtime
 
 # Build-time arguments for non-secret environment variables
 ARG NODE_ENV=production
