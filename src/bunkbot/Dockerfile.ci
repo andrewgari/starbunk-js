@@ -21,16 +21,18 @@ RUN apk add --no-cache openssl dumb-init curl && \
     adduser -S -D -H -u 1001 -h /app -s /sbin/nologin -G bunkbot bunkbot
 
 # Copy package files for dependency installation
+# Note: src/shared is intentionally NOT copied — without its directory present,
+# npm workspaces skips it and installs @starbunk/shared from GitHub Packages.
 COPY package.json package-lock.json* ./
-COPY src/shared/package.json ./src/shared/
 COPY src/bunkbot/package.json ./src/bunkbot/
 
-# Install only production dependencies
+# Install only production dependencies, fetching @starbunk/shared from registry
 RUN --mount=type=cache,target=/root/.npm \
-    npm ci --prefer-offline --no-audit --omit=dev --ignore-scripts
+    --mount=type=secret,id=npm_token \
+    NODE_AUTH_TOKEN=$(cat /run/secrets/npm_token 2>/dev/null || echo "") \
+    npm install --prefer-offline --no-audit --omit=dev --ignore-scripts
 
-# Copy pre-built artifacts from CI
-COPY --chown=bunkbot:bunkbot src/shared/dist ./src/shared/dist
+# Copy pre-built app artifact from CI
 COPY --chown=bunkbot:bunkbot src/bunkbot/dist ./src/bunkbot/dist
 
 # Set default environment variables from build args
