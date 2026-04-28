@@ -15,6 +15,12 @@ jobs:
   detect_changes:
     name: Detect Changed Apps
     runs-on: ubuntu-latest
+    # Skip the entire pipeline when the version-bump commit itself triggers the
+    # workflow (GitHub's built-in [skip ci] support is not guaranteed for all
+    # event types, so we add an explicit guard here as well).
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      !contains(github.event.head_commit.message, '[skip ci]')
     outputs:
       apps: ${{ steps.matrix.outputs.apps }}
       shared: ${{ steps.filter.outputs.shared }}
@@ -68,6 +74,12 @@ jobs:
     needs: detect_changes
     steps:
       - uses: actions/checkout@v6
+        with:
+          # Full history + tags needed by bump-versions.sh to analyse commits
+          fetch-depth: 0
+
+      - name: Fetch all tags
+        run: git fetch --tags --force
 
       - name: Set short SHA
         run: echo "SHORT_SHA=${GITHUB_SHA:0:7}" >> $GITHUB_ENV
@@ -93,6 +105,12 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Determine version bumps
+        # Runs BEFORE the build so APP_VERSION baked into Docker images reflects
+        # the new version. Writes per-app VERSION files + .version-bumps.json.
+        # Does NOT commit — that happens in publish_releases after E2E passes.
+        run: bash scripts/bump-versions.sh
+
       - name: Build changed apps (shared always rebuilt as a dependency)
         run: |
           npm run clean || true
@@ -112,7 +130,9 @@ jobs:
             $DIRS \
             src/*/package.json \
             src/*/VERSION \
+            .version-bumps.json \
             package.json \
+            VERSION \
             package-lock.json
 
       - name: Upload Artifacts
@@ -322,7 +342,7 @@ jobs:
             ❌ **E2E tests FAILED** — deploy is blocked
             — [View run](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})
 
-  # ─── Per-app version bumps + tagging ─────────────────────────────────────────
+  # ─── Commit versions + tag releases ─────────────────────────────────────────
   publish_releases:
     name: Publish Releases
     runs-on: ubuntu-latest
@@ -349,6 +369,29 @@ jobs:
           username: ${{ github.repository_owner }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Download build artifact
+        uses: actions/download-artifact@v7
+        with:
+          name: build-artifacts
+
+      - name: Restore pre-bumped VERSION files from artifact
+        # The build artifact contains the already-bumped per-app VERSION files,
+        # package.json files, and .version-bumps.json written by bump-versions.sh
+        # in build_apps. Extract them so we can commit them here rather than
+        # re-running the bump script (which would recalculate from git history).
+        run: |
+          tar -xzf build-artifacts.tar.gz \
+            --wildcards \
+            'src/*/VERSION' 'src/*/package.json' \
+            'package.json' 'VERSION' \
+            2>/dev/null || tar -xzf build-artifacts.tar.gz
+
+      - name: Read bumped versions
+        id: bump
+        run: |
+          VERSIONS_JSON=$(cat .version-bumps.json 2>/dev/null || echo '{}')
+          echo "versions=$VERSIONS_JSON" >> $GITHUB_OUTPUT
+
       - name: Tag changed apps as :latest
         run: |
           OWNER_LC=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
@@ -359,18 +402,11 @@ jobs:
             docker push ${IMAGE}:latest
           done
 
-      - name: Bump per-app versions
-        id: bump
-        run: |
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git config user.name "github-actions[bot]"
-          bash scripts/bump-versions.sh
-          VERSIONS_JSON=$(cat .version-bumps.json 2>/dev/null || echo '{}')
-          echo "versions=$VERSIONS_JSON" >> $GITHUB_OUTPUT
-
       - name: Commit version bumps
         id: commit
         run: |
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git config user.name "github-actions[bot]"
           git add src/*/VERSION src/*/package.json package.json VERSION
           if git diff --staged --quiet; then
             echo "No version changes to commit"
@@ -394,7 +430,14 @@ jobs:
             [[ -z "$VERSION" ]] && continue
 
             TAG="${APP}-v${VERSION}"
-            git tag "$TAG" -m "Release ${APP} v${VERSION}"
+
+            # Idempotent: skip if tag already exists (handles workflow re-runs)
+            if git tag -l "$TAG" | grep -q .; then
+              echo "Tag $TAG already exists — skipping"
+            else
+              git tag "$TAG" -m "Release ${APP} v${VERSION}"
+              echo "Created tag: ${TAG}"
+            fi
 
             # Tag the Docker image (bots only, shared has no image)
             if [[ "$APP" != "shared" ]]; then
@@ -403,8 +446,6 @@ jobs:
               docker tag "${IMAGE}:latest" "${IMAGE}:${VERSION}"
               docker push "${IMAGE}:${VERSION}"
             fi
-
-            echo "Tagged: ${TAG}"
           done
 
           git push --tags

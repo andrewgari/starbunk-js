@@ -38,7 +38,8 @@ bump_version() {
   esac
 }
 
-# Determine the highest bump type from a newline-separated list of commit subjects.
+# Determine the highest bump type from a newline-separated list of full commit
+# messages (use --format="%B" so BREAKING CHANGE footers are included).
 # Prints: major | minor | patch | none
 analyze_commits() {
   local COMMITS="$1"
@@ -85,10 +86,10 @@ update_package_json() {
 
 SHARED_LAST_TAG=$(git tag -l "shared-v*" --sort=-v:refname 2>/dev/null | head -1)
 if [[ -n "$SHARED_LAST_TAG" ]]; then
-  SHARED_COMMITS=$(git log "${SHARED_LAST_TAG}..HEAD" --format="%s" -- src/shared/ 2>/dev/null || true)
+  SHARED_COMMITS=$(git log "${SHARED_LAST_TAG}..HEAD" --format="%B" -- src/shared/ 2>/dev/null || true)
 else
   # First run: look at the last 30 shared commits as a baseline
-  SHARED_COMMITS=$(git log --format="%s" -- src/shared/ 2>/dev/null | head -30 || true)
+  SHARED_COMMITS=$(git log --format="%B" -- src/shared/ 2>/dev/null | head -100 || true)
 fi
 
 SHARED_BUMP=$(analyze_commits "$SHARED_COMMITS")
@@ -103,7 +104,13 @@ if [[ "$SHARED_BUMP" != "none" ]]; then
   echo "  → shared bumped to ${SHARED_NEW}"
 fi
 
-SHARED_CHANGED=$([[ "$SHARED_BUMP" != "none" ]] && echo "true" || echo "false")
+# SHARED_CHANGED is true whenever ANY commits touched src/shared (regardless of
+# commit type) — chore:/docs:/style: changes to shared still require all apps
+# to rebuild against the new shared code, so they all get at minimum a minor bump.
+SHARED_CHANGED=false
+if [[ -n "$(echo "$SHARED_COMMITS" | tr -d '[:space:]')" ]]; then
+  SHARED_CHANGED=true
+fi
 
 # ─── Per-app analysis ──────────────────────────────────────────────────────────
 
@@ -112,10 +119,10 @@ for APP in "${APPS[@]}"; do
   LAST_TAG=$(git tag -l "${APP}-v*" --sort=-v:refname 2>/dev/null | head -1)
 
   if [[ -n "$LAST_TAG" ]]; then
-    APP_COMMITS=$(git log "${LAST_TAG}..HEAD" --format="%s" -- "src/${APP}/" 2>/dev/null || true)
+    APP_COMMITS=$(git log "${LAST_TAG}..HEAD" --format="%B" -- "src/${APP}/" 2>/dev/null || true)
   else
     # First run: look at the last 30 app-specific commits as a baseline
-    APP_COMMITS=$(git log --format="%s" -- "src/${APP}/" 2>/dev/null | head -30 || true)
+    APP_COMMITS=$(git log --format="%B" -- "src/${APP}/" 2>/dev/null | head -100 || true)
   fi
 
   APP_BUMP=$(analyze_commits "$APP_COMMITS")
@@ -150,3 +157,9 @@ JSON+="}"
 echo "$JSON" > .version-bumps.json
 echo ""
 echo "Bumps applied: $JSON"
+
+# Keep root VERSION + root package.json in sync with the highest app version
+# so any tooling that still reads the root files sees current data.
+if [[ ${#NEW_VERSIONS[@]} -gt 0 ]]; then
+  bash "$(dirname "${BASH_SOURCE[0]}")/sync-versions.sh"
+fi
