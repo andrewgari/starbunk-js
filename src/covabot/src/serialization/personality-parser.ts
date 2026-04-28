@@ -10,6 +10,7 @@ import {
   fileExists,
   createDirectory,
   readFileUtf8,
+  checkReadAccess,
 } from './file-reader';
 import { validateOrThrow } from './personality-validator';
 import { mapToCovaProfile } from './personality-mapper';
@@ -203,6 +204,15 @@ export function loadPersonalitiesFromDirectory(dirPath: string): CovaProfile[] {
 
     if (isDirectory(entryPath)) {
       // Subdirectory format: [name]/profile.yml with optional markdown files
+      try {
+        checkReadAccess(entryPath);
+      } catch {
+        logger
+          .withMetadata({ dir: entry, path: entryPath })
+          .warn('Personality directory is not readable — check file permissions (chmod a+rX)');
+        continue;
+      }
+
       const profileFilePath = path.join(entryPath, 'profile.yml');
       if (!fileExists(profileFilePath)) continue;
 
