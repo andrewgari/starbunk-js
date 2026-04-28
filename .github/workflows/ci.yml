@@ -37,7 +37,6 @@ jobs:
             core:
               - 'package.json'
               - 'package-lock.json'
-              - '.github/workflows/**'
             e2e:
               - 'src/e2e/**'
               - 'docker-compose.e2e.yml'
