@@ -39,7 +39,7 @@ npm run show-versions  # print current version of every package
 
 Bump levels: `patch` (bug fix), `minor` (new feature), `major` (breaking change).
 
-The changeset file goes in `.changeset/` and must be committed with your changes. CI blocks merges without one (bypass with `skip-changeset` PR label for infra-only PRs).
+The changeset file goes in `.changeset/` and must be committed with your changes. Infra-only PRs (no source changes in `src/{app}/src/`) may omit a changeset.
 
 `@starbunk/shared` changes do **not** auto-bump app versions. Apps only bump when they have their own changeset. If an app needs a new shared feature, update its `@starbunk/shared` dep and add a changeset for that app in the same PR.
 

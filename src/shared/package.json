@@ -41,7 +41,7 @@
   "scripts": {
     "build": "tsc --build && tsc-alias -p tsconfig.json",
     "dev": "tsc --build --watch",
-    "publish": "npm publish",
+    "publish:pkg": "npm publish",
     "test": "vitest run",
     "test:watch": "vitest",
     "type-check": "tsc --build --dry",

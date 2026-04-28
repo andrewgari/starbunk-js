@@ -107,7 +107,12 @@ jobs:
         # Runs BEFORE the build so APP_VERSION baked into images reflects the
         # new version. Does NOT commit — that happens in publish_releases after
         # E2E passes. No-op if no changesets are queued.
-        run: npx changeset version 2>/dev/null || true
+        run: |
+          if ! find .changeset -maxdepth 1 -name '*.md' -print -quit 2>/dev/null | grep -q .; then
+            echo "No changesets queued — skipping version bump."
+          else
+            npx changeset version
+          fi
 
       - name: Build changed apps (shared always rebuilt as a dependency)
         run: |
@@ -421,7 +426,9 @@ jobs:
         run: |
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git config user.name "github-actions[bot]"
-          git add src/*/package.json src/*/CHANGELOG.md package.json
+          shopt -s nullglob
+          files=(src/*/package.json src/*/CHANGELOG.md package.json)
+          git add "${files[@]}"
           if git diff --staged --quiet; then
             echo "No version changes to commit"
             echo "bumped=false" >> $GITHUB_OUTPUT
@@ -439,9 +446,13 @@ jobs:
           OWNER_LC=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
 
           for APP in bunkbot djcova covabot bluebot shared; do
-            APP_UPPER=$(echo "$APP" | tr '[:lower:]' '[:upper:]')
-            VERSION="${{ steps.versions.outputs[format('{0}_version', APP_UPPER)] }}"
-            CHANGED="${{ steps.versions.outputs[format('{0}_changed', APP_UPPER)] }}"
+            case "$APP" in
+              bunkbot) VERSION="${{ steps.versions.outputs.bunkbot_version }}"; CHANGED="${{ steps.versions.outputs.bunkbot_changed }}" ;;
+              djcova)  VERSION="${{ steps.versions.outputs.djcova_version }}";  CHANGED="${{ steps.versions.outputs.djcova_changed }}" ;;
+              covabot) VERSION="${{ steps.versions.outputs.covabot_version }}"; CHANGED="${{ steps.versions.outputs.covabot_changed }}" ;;
+              bluebot) VERSION="${{ steps.versions.outputs.bluebot_version }}"; CHANGED="${{ steps.versions.outputs.bluebot_changed }}" ;;
+              shared)  VERSION="${{ steps.versions.outputs.shared_version }}";  CHANGED="${{ steps.versions.outputs.shared_changed }}" ;;
+            esac
             [[ "$CHANGED" != "true" || -z "$VERSION" ]] && continue
 
             TAG="${APP}/v${VERSION}"
