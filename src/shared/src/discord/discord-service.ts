@@ -153,26 +153,6 @@ export class DiscordService implements DiscordService {
       })
       .debug('Sending message with bot identity');
 
-    try {
-      await this.webhookService.send(message, botIdentity, responseText);
-    } catch (error) {
-      const isPermissionError =
-        error instanceof Error && 'code' in error && (error as { code: number }).code === 50013;
-      if (isPermissionError) {
-        logger
-          .withMetadata({ channel_id: message.channelId, bot_name: botIdentity.botName })
-          .warn('Missing Manage Webhooks permission — falling back to direct reply');
-        await message.reply(responseText);
-      } else {
-        throw error;
-      }
-    }
-
-    logger
-      .withMetadata({
-        channel_id: message.channelId,
-        bot_name: botIdentity.botName,
-      })
-      .debug('Message sent with bot identity');
+    await this.webhookService.send(message, botIdentity, responseText);
   }
 }
