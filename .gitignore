@@ -76,6 +76,7 @@ cypress/downloads/
 .env.local
 .env copy
 config.json
+!.changeset/config.json
 bots.yml
 prometheus.yml
 
