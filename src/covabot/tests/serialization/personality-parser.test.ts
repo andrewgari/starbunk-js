@@ -252,7 +252,7 @@ profile:
       expect(profiles[0].id).toBe('valid-bot');
     });
 
-    it('should ignore files at the top level (only processes subdirectories)', () => {
+    it('should load flat .yml files alongside subdirectory personalities', () => {
       const validYaml = `
 profile:
   id: "test-bot"
@@ -263,15 +263,26 @@ profile:
   personality:
     system_prompt: "Test"
 `;
+      const flatYaml = `
+profile:
+  id: "flat-bot"
+  display_name: "Flat Bot"
+  identity:
+    type: static
+    botName: "Flat Bot"
+  personality:
+    system_prompt: "Flat test"
+`;
       mkPersonalityDir('test-bot', validYaml);
-      // These top-level files should be ignored
+      // Non-YAML files should still be ignored; flat YAML files should be loaded
       fs.writeFileSync(path.join(testDir, 'readme.txt'), 'Not a personality dir');
-      fs.writeFileSync(path.join(testDir, 'stray.yml'), validYaml);
+      fs.writeFileSync(path.join(testDir, 'flat-bot.yml'), flatYaml);
 
       const profiles = loadPersonalitiesFromDirectory(testDir);
 
-      expect(profiles).toHaveLength(1);
-      expect(profiles[0].id).toBe('test-bot');
+      expect(profiles).toHaveLength(2);
+      const ids = profiles.map(p => p.id).sort();
+      expect(ids).toEqual(['flat-bot', 'test-bot']);
     });
 
     it('should skip subdirectories without a profile.yml', () => {

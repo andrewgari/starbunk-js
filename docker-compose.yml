@@ -181,7 +181,7 @@ services:
       # Storage Configuration
       - COVABOT_DATA_DIR=/app/data
       - COVABOT_API_KEY=${COVABOT_API_KEY:-}
-      - COVABOT_PERSONALITIES_PATH=${COVABOT_PERSONALITIES_PATH:-}
+      - COVABOT_PERSONALITIES_PATH=${COVABOT_PERSONALITIES_PATH:-/app/config/profiles}
       - COVABOT_DATABASE_PATH=${COVABOT_DATABASE_PATH:-}
 
       # Cache & Vector DB
