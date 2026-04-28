@@ -25,6 +25,24 @@ The project is split into four isolated containers, each under `src/`:
 - Changes to shared packages/libraries must be made in `src/shared`.
 - Use correct Docker service names (`starbunk-postgres`, `starbunk-redis`, `starbunk-qdrant`) for inter-container communication.
 
+## Versioning & Releases
+
+Each app (`bunkbot`, `djcova`, `covabot`, `bluebot`) and `shared` has its own independent version managed by **changesets**.
+
+**Rule: any PR that changes source code in `src/{app}/src/` MUST include a changeset.**
+
+```bash
+npm run cs          # add a changeset (interactive — pick package, level, write one line)
+npm run cs:status   # see what's queued
+npm run show-versions  # print current version of every package
+```
+
+Bump levels: `patch` (bug fix), `minor` (new feature), `major` (breaking change).
+
+The changeset file goes in `.changeset/` and must be committed with your changes. CI blocks merges without one (bypass with `skip-changeset` PR label for infra-only PRs).
+
+`@starbunk/shared` changes do **not** auto-bump app versions. Apps only bump when they have their own changeset. If an app needs a new shared feature, update its `@starbunk/shared` dep and add a changeset for that app in the same PR.
+
 ## CI/CD and Definition of "Done"
 - The only satisfactory **"complete"** state for any task touching this repository is when **all CI/CD checks are passing**.
 - Locally, always run `npm run check:ci` at the project root before considering a task done.

@@ -54,13 +54,16 @@ jobs:
 
           SHARED="${{ steps.filter.outputs.shared }}"
           APPS=()
-          [[ "${{ steps.filter.outputs.bunkbot }}" == "true" || "$SHARED" == "true" ]] && APPS+=("bunkbot")
-          [[ "${{ steps.filter.outputs.djcova }}"  == "true" || "$SHARED" == "true" ]] && APPS+=("djcova")
-          [[ "${{ steps.filter.outputs.covabot }}" == "true" || "$SHARED" == "true" ]] && APPS+=("covabot")
-          [[ "${{ steps.filter.outputs.bluebot }}" == "true" || "$SHARED" == "true" ]] && APPS+=("bluebot")
+          # Shared changes alone do NOT force app image rebuilds.
+          # Apps only rebuild when their own source changes (or they explicitly
+          # updated their @starbunk/shared dep in the same PR).
+          [[ "${{ steps.filter.outputs.bunkbot }}" == "true" ]] && APPS+=("bunkbot")
+          [[ "${{ steps.filter.outputs.djcova }}"  == "true" ]] && APPS+=("djcova")
+          [[ "${{ steps.filter.outputs.covabot }}" == "true" ]] && APPS+=("covabot")
+          [[ "${{ steps.filter.outputs.bluebot }}" == "true" ]] && APPS+=("bluebot")
 
-          if [ ${#APPS[@]} -eq 0 ]; then
-            # No app-level changes (e.g. only CI/root files changed) — build all
+          if [ ${#APPS[@]} -eq 0 ] && [ "$SHARED" != "true" ]; then
+            # No app-level or shared changes (CI/root files only) — rebuild all as safety net
             echo 'apps=["bunkbot","djcova","covabot","bluebot"]' >> $GITHUB_OUTPUT
           else
             APPS_JSON=$(printf '%s\n' "${APPS[@]}" | jq -R . | jq -sc .)
@@ -74,12 +77,6 @@ jobs:
     needs: detect_changes
     steps:
       - uses: actions/checkout@v6
-        with:
-          # Full history + tags needed by bump-versions.sh to analyse commits
-          fetch-depth: 0
-
-      - name: Fetch all tags
-        run: git fetch --tags --force
 
       - name: Set short SHA
         run: echo "SHORT_SHA=${GITHUB_SHA:0:7}" >> $GITHUB_ENV
@@ -105,11 +102,12 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Determine version bumps
-        # Runs BEFORE the build so APP_VERSION baked into Docker images reflects
-        # the new version. Writes per-app VERSION files + .version-bumps.json.
-        # Does NOT commit — that happens in publish_releases after E2E passes.
-        run: bash scripts/bump-versions.sh
+      - name: Apply changesets
+        # Bumps package.json versions from any queued .changeset/*.md files.
+        # Runs BEFORE the build so APP_VERSION baked into images reflects the
+        # new version. Does NOT commit — that happens in publish_releases after
+        # E2E passes. No-op if no changesets are queued.
+        run: npx changeset version 2>/dev/null || true
 
       - name: Build changed apps (shared always rebuilt as a dependency)
         run: |
@@ -129,11 +127,10 @@ jobs:
           tar -czf build-artifacts.tar.gz \
             $DIRS \
             src/*/package.json \
-            src/*/VERSION \
-            .version-bumps.json \
+            src/*/CHANGELOG.md \
             package.json \
-            VERSION \
-            package-lock.json
+            package-lock.json \
+            2>/dev/null || tar -czf build-artifacts.tar.gz $DIRS src/*/package.json package.json package-lock.json
 
       - name: Upload Artifacts
         uses: actions/upload-artifact@v7
@@ -196,7 +193,7 @@ jobs:
             docker tag "${IMAGE}:sha-${HASH}" "${IMAGE}:main"
           else
             echo "Building image ${IMAGE}:main"
-            APP_VERSION=$(cat "src/${APP}/VERSION" 2>/dev/null || echo "dev")
+            APP_VERSION=$(node -p "require('./src/${APP}/package.json').version" 2>/dev/null || echo "dev")
             docker build -f ./src/${APP}/Dockerfile.ci \
               --build-arg APP_VERSION="${APP_VERSION}" \
               -t ${IMAGE}:main -t ${IMAGE}:sha-${HASH} .
@@ -347,6 +344,14 @@ jobs:
     name: Publish Releases
     runs-on: ubuntu-latest
     needs: [detect_changes, docker_publish, e2e_tests]
+    # Run even if docker_publish/e2e were skipped (shared-only change).
+    # Only skip if a dependency actually failed.
+    if: >-
+      always() &&
+      !cancelled() &&
+      needs.detect_changes.result == 'success' &&
+      (needs.docker_publish.result == 'success' || needs.docker_publish.result == 'skipped') &&
+      (needs.e2e_tests.result == 'success' || needs.e2e_tests.result == 'skipped')
     steps:
       - uses: actions/checkout@v6
         with:
@@ -358,6 +363,7 @@ jobs:
         with:
           node-version: 24
           cache: 'npm'
+          registry-url: 'https://npm.pkg.github.com'
 
       - name: Install dependencies
         run: npm ci
@@ -374,23 +380,31 @@ jobs:
         with:
           name: build-artifacts
 
-      - name: Restore pre-bumped VERSION files from artifact
-        # The build artifact contains the already-bumped per-app VERSION files,
-        # package.json files, and .version-bumps.json written by bump-versions.sh
-        # in build_apps. Extract them so we can commit them here rather than
-        # re-running the bump script (which would recalculate from git history).
+      - name: Restore bumped package.json files from artifact
+        # build_apps ran `npx changeset version` before building, so the artifact
+        # has already-bumped package.json and CHANGELOG.md files.
+        # Extract them here so we commit the correct bumped versions.
         run: |
           tar -xzf build-artifacts.tar.gz \
             --wildcards \
-            'src/*/VERSION' 'src/*/package.json' \
-            'package.json' 'VERSION' \
+            'src/*/package.json' 'src/*/CHANGELOG.md' \
+            'package.json' \
             2>/dev/null || tar -xzf build-artifacts.tar.gz
 
-      - name: Read bumped versions
-        id: bump
+      - name: Detect version changes
+        id: versions
         run: |
-          VERSIONS_JSON=$(cat .version-bumps.json 2>/dev/null || echo '{}')
-          echo "versions=$VERSIONS_JSON" >> $GITHUB_OUTPUT
+          for PKG in bunkbot djcova covabot bluebot shared; do
+            NEW_VER=$(node -p "require('./src/${PKG}/package.json').version" 2>/dev/null || echo "")
+            OLD_VER=$(git show HEAD:src/${PKG}/package.json 2>/dev/null \
+              | node -e "let d='';process.stdin.on('data',c=>d+=c);process.stdin.on('end',()=>console.log(JSON.parse(d).version))" \
+              2>/dev/null || echo "0.0.0")
+            if [ -n "$NEW_VER" ] && [ "$NEW_VER" != "$OLD_VER" ]; then
+              echo "${PKG}_version=${NEW_VER}" >> $GITHUB_OUTPUT
+              echo "${PKG}_changed=true" >> $GITHUB_OUTPUT
+              echo "${PKG}: ${OLD_VER} -> ${NEW_VER}"
+            fi
+          done
 
       - name: Tag changed apps as :latest
         run: |
@@ -407,12 +421,12 @@ jobs:
         run: |
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git config user.name "github-actions[bot]"
-          git add src/*/VERSION src/*/package.json package.json VERSION
+          git add src/*/package.json src/*/CHANGELOG.md package.json
           if git diff --staged --quiet; then
             echo "No version changes to commit"
             echo "bumped=false" >> $GITHUB_OUTPUT
           else
-            git commit -m "chore(release): bump per-app versions [skip ci]"
+            git commit -m "chore(release): version packages [skip ci]"
             git push
             echo "bumped=true" >> $GITHUB_OUTPUT
           fi
@@ -422,14 +436,15 @@ jobs:
       - name: Create per-app tags and version Docker images
         if: steps.commit.outputs.bumped == 'true'
         run: |
-          VERSIONS='${{ steps.bump.outputs.versions }}'
           OWNER_LC=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
 
           for APP in bunkbot djcova covabot bluebot shared; do
-            VERSION=$(echo "$VERSIONS" | jq -r --arg app "$APP" '.[$app] // empty')
-            [[ -z "$VERSION" ]] && continue
+            APP_UPPER=$(echo "$APP" | tr '[:lower:]' '[:upper:]')
+            VERSION="${{ steps.versions.outputs[format('{0}_version', APP_UPPER)] }}"
+            CHANGED="${{ steps.versions.outputs[format('{0}_changed', APP_UPPER)] }}"
+            [[ "$CHANGED" != "true" || -z "$VERSION" ]] && continue
 
-            TAG="${APP}-v${VERSION}"
+            TAG="${APP}/v${VERSION}"
 
             # Idempotent: skip if tag already exists (handles workflow re-runs)
             if git tag -l "$TAG" | grep -q .; then
@@ -439,8 +454,11 @@ jobs:
               echo "Created tag: ${TAG}"
             fi
 
-            # Tag the Docker image (bots only, shared has no image)
-            if [[ "$APP" != "shared" ]]; then
+            # Publish @starbunk/shared to GitHub Packages
+            if [[ "$APP" == "shared" ]]; then
+              cd src/shared && npm publish && cd ../..
+            else
+              # Tag the Docker image for bot containers
               IMAGE="ghcr.io/${OWNER_LC}/${APP}"
               docker pull "${IMAGE}:latest" || true
               docker tag "${IMAGE}:latest" "${IMAGE}:${VERSION}"
@@ -451,6 +469,7 @@ jobs:
           git push --tags
         env:
           GITHUB_TOKEN: ${{ secrets.CI_TOKEN }}
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Create build tag (no version bumps)
         id: build_tag
@@ -474,8 +493,12 @@ jobs:
           user_id: ${{ vars.DISCORD_NOTIFY_USER_ID }}
           message: |
             🚀 **Versions released**
-            `${{ steps.bump.outputs.versions }}`
-            Docker images tagged and pushed. Deployment will follow.
+            ${{ steps.versions.outputs.bunkbot_changed == 'true' && format('• bunkbot v{0}', steps.versions.outputs.bunkbot_version) || '' }}
+            ${{ steps.versions.outputs.djcova_changed == 'true' && format('• djcova v{0}', steps.versions.outputs.djcova_version) || '' }}
+            ${{ steps.versions.outputs.covabot_changed == 'true' && format('• covabot v{0}', steps.versions.outputs.covabot_version) || '' }}
+            ${{ steps.versions.outputs.bluebot_changed == 'true' && format('• bluebot v{0}', steps.versions.outputs.bluebot_version) || '' }}
+            ${{ steps.versions.outputs.shared_changed == 'true' && format('• shared v{0}', steps.versions.outputs.shared_version) || '' }}
+            Watchtower will deploy within 5 minutes.
             — [View run](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})
 
       - name: Notify — build tagged

@@ -1,5 +1,7 @@
 # CovaBot - Development Instructions
 
+> **Releasing:** Any change to `src/covabot/src/` requires a changeset. Run `npm run cs` from the repo root, pick `@starbunk/covabot`, choose the bump level, write one line. See `wiki/raw/Versioning.md`.
+
 ## Goals & Purpose
 CovaBot acts as the AI personality for StarBunk, supplying context-aware, LLM-driven responses designed to mimic and interact with actual users. 
 
