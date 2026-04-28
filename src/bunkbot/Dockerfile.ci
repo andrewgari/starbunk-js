@@ -26,6 +26,9 @@ RUN apk add --no-cache openssl dumb-init curl && \
 COPY package.json package-lock.json* ./
 COPY src/bunkbot/package.json ./src/bunkbot/
 
+# Copy .npmrc for @starbunk registry config (no token — token comes from secret mount)
+COPY .npmrc ./
+
 # Install only production dependencies, fetching @starbunk/shared from registry
 RUN --mount=type=cache,target=/root/.npm \
     --mount=type=secret,id=npm_token \
