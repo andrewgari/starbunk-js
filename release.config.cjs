@@ -1,3 +1,9 @@
+// NOTE: This config is no longer used by CI.
+// Per-app versioning is now handled by scripts/bump-versions.sh, driven by
+// the detect_changes → publish_releases jobs in .github/workflows/main.yml.
+// Each app has its own src/<app>/VERSION file and git tags (<app>-v<version>).
+// This file is retained for local/manual semantic-release runs if needed.
+
 module.exports = {
   branches: [
     "main",
