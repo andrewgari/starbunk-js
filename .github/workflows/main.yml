@@ -265,6 +265,8 @@ jobs:
 
       - name: Check exists and build image
         id: check_build
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           APP=${{ matrix.app }}
           OWNER_LC=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
@@ -282,8 +284,6 @@ jobs:
               --build-arg APP_VERSION="${APP_VERSION}" \
               --secret id=npm_token,env=GITHUB_TOKEN \
               -t ${IMAGE}:main -t ${IMAGE}:sha-${HASH} .
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
             docker push ${IMAGE}:sha-${HASH}
           fi
           docker tag "${IMAGE}:main" "${IMAGE}:sha-${GIT_SHA}"
