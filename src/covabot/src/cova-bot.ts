@@ -166,9 +166,18 @@ export class CovaBot {
     const profiles = loadPersonalitiesFromDirectory(personalitiesPath);
     this.profiles = new Map(profiles.map(profile => [profile.id, profile]));
 
-    logger
-      .withMetadata({ count: this.profiles.size, path: personalitiesPath })
-      .info('Profiles loaded');
+    if (this.profiles.size === 0) {
+      logger
+        .withMetadata({ path: personalitiesPath })
+        .warn(
+          'No personality profiles found — CovaBot will not respond to any messages. ' +
+            'Create a subdirectory with a profile.yml in the personalities path.',
+        );
+    } else {
+      logger
+        .withMetadata({ count: this.profiles.size, path: personalitiesPath })
+        .info('Profiles loaded');
+    }
 
     // Always audit personality data completeness — warns on startup if data is missing
     for (const profile of this.profiles.values()) {

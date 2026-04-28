@@ -115,9 +115,10 @@ triggers:
 
 Personalities are automatically loaded from this directory when CovaBot starts. The directory path can be configured via:
 
-1. Constructor parameter: `new PersonalityManager('/path/to/config')`
-2. Environment variable: `COVABOT_CONFIG_DIR=/path/to/config`
-3. Default location: `config/covabot/` in the project root
+1. Environment variable: `COVABOT_PERSONALITIES_PATH=/path/to/personalities`
+2. Environment variable: `COVABOT_CONFIG_DIR=/path/to/personalities` (legacy alias)
+3. Default location (local dev): `config/covabot/` in the project root
+4. Default location (Docker): `/app/config` (the docker-compose volume mount target)
 
 ## Environment Variables
 
@@ -140,10 +141,24 @@ Writable data (personality notes, conversation history) goes in the data directo
 
 ## Adding New Personalities
 
-1. Create a new `.yml` file in this directory
-2. Follow the schema above
-3. CovaBot will automatically detect and load the new personality when the YAML file is created or modified (hot-reload via file watcher; no restart required under normal operation). If the file watcher is disabled or fails, restarting CovaBot will also load the new personality.
-4. The personality will be available by its `id` or `display_name`
+Each personality lives in its own subdirectory with a `profile.yml` inside:
+
+```
+config/covabot/
+  my-persona/
+    profile.yml       ← required
+    core.md           ← optional: overrides system_prompt from profile.yml
+    speech.md         ← optional: appended as "## Speech Style" section
+    likes.md          ← optional: appended as "## Things I Like" section
+    dislikes.md       ← optional
+    opinions.md       ← optional
+    beliefs.md        ← optional
+```
+
+1. Create a subdirectory under the personalities path (e.g. `config/covabot/my-persona/`)
+2. Add a `profile.yml` following the schema above
+3. Restart CovaBot (or wait for the file-watcher to reload)
+4. The personality will be active by its `id`
 
 ## Validation
 
