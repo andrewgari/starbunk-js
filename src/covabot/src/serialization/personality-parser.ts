@@ -216,6 +216,7 @@ export function loadPersonalitiesFromDirectory(dirPath: string): CovaProfile[] {
       const profileFilePath = path.join(entryPath, 'profile.yml');
       if (!fileExists(profileFilePath)) continue;
 
+
       try {
         const profile = loadPersonalityFromDirectory(entryPath);
         profiles.push(profile);

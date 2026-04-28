@@ -1,3 +1,9 @@
+## [1.46.3](https://github.com/andrewgari/starbunk-js/compare/v1.46.2...v1.46.3) (2026-04-28)
+
+### Bug Fixes
+
+* **covabot:** fix personality loading — path mismatch, flat file support, startup warnings ([#692](https://github.com/andrewgari/starbunk-js/issues/692)) ([01be08d](https://github.com/andrewgari/starbunk-js/commit/01be08de42296e51399cb83e4cf639bcf9eb76cb))
+
 ## [1.46.2](https://github.com/andrewgari/starbunk-js/compare/v1.46.1...v1.46.2) (2026-04-27)
 
 ### Bug Fixes
