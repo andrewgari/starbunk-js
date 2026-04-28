@@ -119,11 +119,12 @@ export class WebhookService {
       throw new Error(`Channel ${channelId} does not support webhooks`);
     }
 
-    // Try to find existing webhook
+    // Try to find existing webhook owned by this bot (token must be present to send)
     logger.withMetadata({ channel_id: channelId }).debug('Fetching webhooks for channel');
     const webhooks = await channel.fetchWebhooks();
     let webhook = webhooks.find(
-      wh => wh.name === WEBHOOK_NAME || wh.name.startsWith(WEBHOOK_NAME + ' '),
+      wh =>
+        wh.token !== null && (wh.name === WEBHOOK_NAME || wh.name.startsWith(WEBHOOK_NAME + ' ')),
     );
 
     if (webhook) {
