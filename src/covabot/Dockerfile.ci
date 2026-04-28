@@ -27,16 +27,21 @@ RUN apk add --no-cache openssl dumb-init curl python3 make g++ && \
     chown -R covabot:covabot /app/data /app/config /app/src/config
 
 # Copy package files for dependency installation
+# Note: src/shared is intentionally NOT copied — without its directory present,
+# npm workspaces skips it and installs @starbunk/shared from GitHub Packages.
 COPY package.json package-lock.json* ./
-COPY src/shared/package.json ./src/shared/
 COPY src/covabot/package.json ./src/covabot/
 
-# Install only production dependencies
-RUN --mount=type=cache,target=/root/.npm \
-    npm ci --prefer-offline --no-audit --omit=dev --ignore-scripts
+# Copy .npmrc for @starbunk registry config (no token — token comes from secret mount)
+COPY .npmrc ./
 
-# Copy pre-built artifacts from CI
-COPY --chown=covabot:covabot src/shared/dist ./src/shared/dist
+# Install only production dependencies, fetching @starbunk/shared from registry
+RUN --mount=type=cache,target=/root/.npm \
+    --mount=type=secret,id=npm_token \
+    NODE_AUTH_TOKEN=$(cat /run/secrets/npm_token 2>/dev/null || echo "") \
+    npm install --prefer-offline --no-audit --omit=dev --ignore-scripts
+
+# Copy pre-built app artifact from CI
 COPY --chown=covabot:covabot src/covabot/dist ./src/covabot/dist
 COPY --chown=covabot:covabot src/covabot/migrations ./src/covabot/migrations
 
