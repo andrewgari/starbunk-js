@@ -201,21 +201,33 @@ export function loadPersonalitiesFromDirectory(dirPath: string): CovaProfile[] {
   for (const entry of entries) {
     const entryPath = path.join(dirPath, entry);
 
-    // Each personality lives in its own subdirectory with a profile.yml inside
-    if (!isDirectory(entryPath)) continue;
+    if (isDirectory(entryPath)) {
+      // Subdirectory format: [name]/profile.yml with optional markdown files
+      const profileFilePath = path.join(entryPath, 'profile.yml');
+      if (!fileExists(profileFilePath)) continue;
 
-    const profileFilePath = path.join(entryPath, 'profile.yml');
-    if (!fileExists(profileFilePath)) continue;
-
-    try {
-      const profile = loadPersonalityFromDirectory(entryPath);
-      profiles.push(profile);
-      logger.withMetadata({ dir: entry, profileId: profile.id }).info('Loaded personality');
-    } catch (error) {
-      logger
-        .withError(error)
-        .withMetadata({ dir: entry, path: profileFilePath })
-        .error('Failed to load personality');
+      try {
+        const profile = loadPersonalityFromDirectory(entryPath);
+        profiles.push(profile);
+        logger.withMetadata({ dir: entry, profileId: profile.id }).info('Loaded personality');
+      } catch (error) {
+        logger
+          .withError(error)
+          .withMetadata({ dir: entry, path: profileFilePath })
+          .error('Failed to load personality');
+      }
+    } else if (entry.endsWith('.yml') || entry.endsWith('.yaml')) {
+      // Flat file format: [name].yml directly in the personalities directory
+      try {
+        const profile = parsePersonalityFile(entryPath);
+        profiles.push(profile);
+        logger.withMetadata({ file: entry, profileId: profile.id }).info('Loaded personality');
+      } catch (error) {
+        logger
+          .withError(error)
+          .withMetadata({ file: entry, path: entryPath })
+          .error('Failed to load personality');
+      }
     }
   }
 

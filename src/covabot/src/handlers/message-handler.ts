@@ -71,6 +71,11 @@ export class MessageHandler {
 
     getBotActivityTracker('bot_activity').onMessageReceived();
 
+    if (this.profiles.size === 0) {
+      logger.warn('Received message but no profiles are loaded — cannot respond');
+      return;
+    }
+
     logger
       .withMetadata({
         message_id: message.id,
