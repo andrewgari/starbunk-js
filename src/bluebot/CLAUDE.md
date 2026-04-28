@@ -1,5 +1,7 @@
 # BlueBot - Development Instructions
 
+> **Releasing:** Any change to `src/bluebot/src/` requires a changeset. Run `npm run cs` from the repo root, pick `@starbunk/bluebot`, choose the bump level, write one line. See `wiki/raw/Versioning.md`.
+
 ## Goals & Purpose
 BlueBot is a specialized pattern-matching bot that specifically detects and replies to mentions of "blue" or Blue Mage references within Discord.
 

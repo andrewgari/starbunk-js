@@ -1,5 +1,7 @@
 # DJCova - Development Instructions
 
+> **Releasing:** Any change to `src/djcova/src/` requires a changeset. Run `npm run cs` from the repo root, pick `@starbunk/djcova`, choose the bump level, write one line. See `wiki/raw/Versioning.md`.
+
 ## Goals & Purpose
 DJCova is the dedicated music and audio streaming service for the StarBunk Discord system.
 It enabled members of a discord channel to use commands /play <youtube url>, and the bot will join voice and play music for voice chat.

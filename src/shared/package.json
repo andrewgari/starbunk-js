@@ -34,9 +34,14 @@
     "package.json",
     "README.md"
   ],
+  "publishConfig": {
+    "registry": "https://npm.pkg.github.com",
+    "access": "restricted"
+  },
   "scripts": {
     "build": "tsc --build && tsc-alias -p tsconfig.json",
     "dev": "tsc --build --watch",
+    "publish:pkg": "npm publish",
     "test": "vitest run",
     "test:watch": "vitest",
     "type-check": "tsc --build --dry",
