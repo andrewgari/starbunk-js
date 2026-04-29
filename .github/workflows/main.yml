@@ -144,92 +144,12 @@ jobs:
           path: build-artifacts.tar.gz
           retention-days: 1
 
-  # ─── Publish @starbunk/shared to GitHub Packages (before Docker builds) ──────
-  publish_shared:
-    name: Publish Shared Package
-    runs-on: ubuntu-latest
-    needs: [detect_changes, build_apps]
-    # Run whenever build_apps succeeds — the internal check_version step skips
-    # publishing if the version is unchanged or already published. Gating only
-    # on shared source changes misses the case where a pending changeset bumps
-    # the shared version but the triggering PR didn't touch shared source.
-    if: needs.build_apps.result == 'success'
-    steps:
-      - uses: actions/checkout@v6
-        with:
-          token: ${{ secrets.CI_TOKEN }}
-
-      - name: Setup Node
-        uses: actions/setup-node@v6
-        with:
-          node-version: 24
-          cache: 'npm'
-          registry-url: 'https://npm.pkg.github.com'
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Download build artifact
-        uses: actions/download-artifact@v7
-        with:
-          name: build-artifacts
-
-      - name: Restore bumped package.json files from artifact
-        run: |
-          tar -xzf build-artifacts.tar.gz --wildcards 'src/shared/package.json' 2>/dev/null || \
-          tar -xzf build-artifacts.tar.gz
-
-      - name: Check if shared version changed
-        id: check_version
-        run: |
-          NEW_VER=$(node -p "require('./src/shared/package.json').version")
-          OLD_VER=$(git show HEAD:src/shared/package.json 2>/dev/null \
-            | node -e "let d='';process.stdin.on('data',c=>d+=c);process.stdin.on('end',()=>console.log(JSON.parse(d).version))" \
-            2>/dev/null || echo "0.0.0")
-          echo "new_version=${NEW_VER}" >> $GITHUB_OUTPUT
-          if [ "$NEW_VER" != "$OLD_VER" ]; then
-            echo "changed=true" >> $GITHUB_OUTPUT
-            echo "shared: ${OLD_VER} -> ${NEW_VER}"
-          else
-            echo "changed=false" >> $GITHUB_OUTPUT
-            echo "shared version unchanged (${NEW_VER})"
-          fi
-
-      - name: Check if version already published
-        id: check_published
-        if: steps.check_version.outputs.changed == 'true'
-        run: |
-          NEW_VER="${{ steps.check_version.outputs.new_version }}"
-          if npm view "@starbunk/shared@${NEW_VER}" version \
-               --registry=https://npm.pkg.github.com >/dev/null 2>&1; then
-            echo "already_published=true" >> $GITHUB_OUTPUT
-            echo "@starbunk/shared@${NEW_VER} already published — skipping"
-          else
-            echo "already_published=false" >> $GITHUB_OUTPUT
-          fi
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Build shared for publish
-        if: steps.check_version.outputs.changed == 'true' && steps.check_published.outputs.already_published != 'true'
-        run: npm run build:shared
-
-      - name: Publish @starbunk/shared
-        if: steps.check_version.outputs.changed == 'true' && steps.check_published.outputs.already_published != 'true'
-        run: cd src/shared && npm publish
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
   # ─── Docker publish (only changed apps) ──────────────────────────────────────
   docker_publish:
     name: Docker Publish
     runs-on: ubuntu-latest
-    needs: [detect_changes, build_apps, publish_shared]
-    # Run if publish_shared succeeded or was skipped (no shared changes)
-    if: >-
-      always() &&
-      needs.build_apps.result == 'success' &&
-      (needs.publish_shared.result == 'success' || needs.publish_shared.result == 'skipped')
+    needs: [detect_changes, build_apps]
+    if: needs.build_apps.result == 'success'
     strategy:
       fail-fast: false
       matrix:
@@ -284,7 +204,6 @@ jobs:
             APP_VERSION=$(node -p "require('./src/${APP}/package.json').version" 2>/dev/null || echo "dev")
             docker build -f ./src/${APP}/Dockerfile.ci \
               --build-arg APP_VERSION="${APP_VERSION}" \
-              --secret id=npm_token,env=GITHUB_TOKEN \
               -t ${IMAGE}:main -t ${IMAGE}:sha-${HASH} .
             docker push ${IMAGE}:sha-${HASH}
           fi
@@ -432,14 +351,13 @@ jobs:
   publish_releases:
     name: Publish Releases
     runs-on: ubuntu-latest
-    needs: [detect_changes, publish_shared, docker_publish, e2e_tests]
+    needs: [detect_changes, docker_publish, e2e_tests]
     # Run unless a dependency actually failed (skipped is fine — shared-only
     # or no-app-change runs skip docker/e2e but still need version commits).
     if: >-
       always() &&
       !cancelled() &&
       needs.detect_changes.result == 'success' &&
-      (needs.publish_shared.result == 'success' || needs.publish_shared.result == 'skipped') &&
       (needs.docker_publish.result == 'success' || needs.docker_publish.result == 'skipped') &&
       (needs.e2e_tests.result == 'success' || needs.e2e_tests.result == 'skipped')
     steps:
@@ -453,7 +371,6 @@ jobs:
         with:
           node-version: 24
           cache: 'npm'
-          registry-url: 'https://npm.pkg.github.com'
 
       - name: Install dependencies
         run: npm ci
@@ -557,7 +474,7 @@ jobs:
               docker tag "${IMAGE}:latest" "${IMAGE}:${VERSION}"
               docker push "${IMAGE}:${VERSION}"
             fi
-            # shared is published in publish_shared (before Docker builds)
+            # shared has no Docker image — only source artifact
           done
 
           git push --tags

@@ -71,7 +71,7 @@ jobs:
           # E2E matrix: always include the infrastructure test, plus one entry per changed app
           E2E_INCLUDE='[{"app":"infrastructure","test_cmd":"test:infra"}]'
           for APP in "${APPS[@]}"; do
-            E2E_INCLUDE=$(echo "$E2E_INCLUDE" | jq --arg app "$APP" --arg cmd "test:${APP}" '. + [{"app":$app,"test_cmd":$cmd}]')
+            E2E_INCLUDE=$(echo "$E2E_INCLUDE" | jq -c --arg app "$APP" --arg cmd "test:${APP}" '. + [{"app":$app,"test_cmd":$cmd}]')
           done
 
           echo "changed_apps=$APPS_JSON" >> $GITHUB_OUTPUT

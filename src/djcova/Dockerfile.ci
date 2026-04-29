@@ -27,21 +27,16 @@ RUN apk add --no-cache ffmpeg openssl dumb-init curl python3 py3-pip && \
     pip3 install --no-cache-dir --break-system-packages "yt-dlp==2025.12.8"
 
 # Copy package files for dependency installation
-# Note: src/shared is intentionally NOT copied — without its directory present,
-# npm workspaces skips it and installs @starbunk/shared from GitHub Packages.
 COPY package.json package-lock.json* ./
+COPY src/shared/package.json ./src/shared/
 COPY src/djcova/package.json ./src/djcova/
 
-# Copy .npmrc for @starbunk registry config (no token — token comes from secret mount)
-COPY .npmrc ./
-
-# Install only production dependencies, fetching @starbunk/shared from registry
+# Install only production dependencies
 RUN --mount=type=cache,target=/root/.npm \
-    --mount=type=secret,id=npm_token \
-    NODE_AUTH_TOKEN=$(cat /run/secrets/npm_token 2>/dev/null || echo "") \
-    npm install --prefer-offline --no-audit --omit=dev --ignore-scripts
+    npm ci --prefer-offline --no-audit --omit=dev --ignore-scripts
 
-# Copy pre-built app artifact from CI
+# Copy pre-built artifacts from CI
+COPY --chown=djcova:djcova src/shared/dist ./src/shared/dist
 COPY --chown=djcova:djcova src/djcova/dist ./src/djcova/dist
 
 # Set default environment variables from build args
