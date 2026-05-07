@@ -4,9 +4,11 @@ argument-hint: [type/description]
 allowed-tools: [Bash, Read, Write, Edit, MultiEdit, Glob, Grep]
 ---
 
-# Task: Branch → Work → PR
+# Task: Branch → Worktree → Work → PR
 
-Full development workflow: sync main, branch, do the work, open a PR.
+Full development workflow: sync main, branch, create an isolated worktree, do the work, open a PR, clean up.
+
+Using a worktree gives each task its own working directory so multiple agents can run in parallel without conflicting.
 
 ## Arguments
 
@@ -20,6 +22,8 @@ If no arguments were provided, ask the user: "What are we working on? (e.g. `fea
 
 ## Step 1 — Sync main
 
+From the **main repo root** (`/mnt/data/tank/workspace/starbunk-js`):
+
 ```bash
 git checkout main
 git pull origin main
@@ -29,24 +33,49 @@ If `git checkout main` fails (dirty working tree), stop and tell the user: "Work
 
 ## Step 2 — Create branch
 
-Derive the branch name as `<type>/<description>` from the arguments (e.g. `feat/add-deploy-skill`, `fix/covabot-crash`).
+Derive the branch name as `<type>/<description>` (e.g. `feat/add-deploy-skill`, `fix/covabot-crash`).
 
 ```bash
 git checkout -b <branch-name>
 ```
 
-Confirm the branch was created, then tell the user: "On branch `<branch-name>`. Ready to work."
+## Step 3 — Create worktree
 
-## Step 3 — Do the work
+Create an isolated working directory for this task. All file work happens here from this point on.
 
-Perform the task the user described. Use all available tools as needed.
+```bash
+git worktree add .claude/worktrees/<branch-name> <branch-name>
+```
 
-Follow the project conventions in CLAUDE.md:
+The worktree path is: `.claude/worktrees/<branch-name>` (gitignored, safe to create freely).
+
+**Bootstrap the worktree** — symlink node_modules to avoid a full reinstall on tasks that don't change dependencies:
+
+```bash
+ln -s /mnt/data/tank/workspace/starbunk-js/node_modules \
+  /mnt/data/tank/workspace/starbunk-js/.claude/worktrees/<branch-name>/node_modules
+```
+
+If the task adds or changes npm dependencies, remove the symlink and run `npm ci` in the worktree instead.
+
+Tell the user: "Worktree ready at `.claude/worktrees/<branch-name>`. Working in isolation."
+
+## Step 4 — Do the work
+
+**All file reads, edits, and writes must use the worktree path as root:**
+`/mnt/data/tank/workspace/starbunk-js/.claude/worktrees/<branch-name>/`
+
+Follow project conventions from CLAUDE.md:
 - Changes to shared code go in `src/shared/`
 - Each container (bunkbot, covabot, djcova, bluebot) is isolated under `src/`
 - Do not commit anything under `config/`, `.workspace/`, `data/`, or `local/`
 
-## Step 4 — Commit
+Run checks from the worktree root:
+```bash
+cd /mnt/data/tank/workspace/starbunk-js/.claude/worktrees/<branch-name> && npm run check:ci
+```
+
+## Step 5 — Commit
 
 Stage only the files changed for this task. Write a conventional commit message:
 
@@ -62,11 +91,12 @@ Examples:
 - `chore(ci): update docker publish tags`
 
 ```bash
+cd /mnt/data/tank/workspace/starbunk-js/.claude/worktrees/<branch-name>
 git add <specific files>
 git commit -m "..."
 ```
 
-## Step 5 — Push and open PR
+## Step 6 — Push and open PR
 
 ```bash
 git push -u origin <branch-name>
@@ -89,7 +119,16 @@ EOF
 )"
 ```
 
-Return the PR URL to the user when done.
+## Step 7 — Clean up worktree
+
+After the PR is open, remove the worktree to keep the repo tidy:
+
+```bash
+cd /mnt/data/tank/workspace/starbunk-js
+git worktree remove .claude/worktrees/<branch-name>
+```
+
+Return the PR URL to the user.
 
 ## Rules
 
@@ -97,5 +136,6 @@ Return the PR URL to the user when done.
 - Never commit to main directly.
 - Never use `git add .` or `git add -A` — always stage specific files.
 - Never use `--no-verify` on commits.
+- All file operations after Step 3 must use the worktree path, not the main repo.
 - If tests exist for the affected code, run them before committing.
 - If the task spans multiple logical changes, use multiple commits on the same branch.
