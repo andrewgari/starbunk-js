@@ -339,7 +339,7 @@ describe('Message Flow Integration', () => {
       const decision = await decisionService.shouldRespond(ctx);
 
       expect(decision.shouldRespond).toBe(false);
-      expect(decision.reason).toBe('ignored');
+      expect(decision.reason).toBe('self_message');
     });
 
     it('should ignore messages from bots when configured', async () => {
@@ -352,7 +352,7 @@ describe('Message Flow Integration', () => {
       const decision = await decisionService.shouldRespond(ctx);
 
       expect(decision.shouldRespond).toBe(false);
-      expect(decision.reason).toBe('ignored');
+      expect(decision.reason).toBe('bot_author');
     });
 
     it('should respond to direct mentions', async () => {
@@ -400,7 +400,7 @@ describe('Message Flow Integration', () => {
 
       // Battery ceiling reached — non-pattern message should be blocked
       expect(decision.shouldRespond).toBe(false);
-      expect(decision.reason).toBe('ignored');
+      expect(decision.reason).toBe('rate_limited');
     });
   });
 

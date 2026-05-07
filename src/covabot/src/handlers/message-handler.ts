@@ -26,6 +26,7 @@ import {
 } from '@/models/memory-types';
 import { VERBOSE_LOGGING } from '@/utils/verbose-mode';
 import { getBotActivityTracker } from '@starbunk/shared/health/bot-activity-tracker';
+import { messageDecisionsTotal } from '@/observability/covabot-metrics';
 
 const logger = logLayer.withPrefix('MessageHandler');
 
@@ -129,14 +130,36 @@ export class MessageHandler {
     }
 
     if (!decision.shouldRespond) {
-      if (VERBOSE_LOGGING) {
+      // Log human-visible skips at INFO so Loki can surface them in the dashboard.
+      // Bot/self/empty filters are structural noise — skip those.
+      if (
+        decision.reason !== 'self_message' &&
+        decision.reason !== 'bot_author' &&
+        decision.reason !== 'empty_message'
+      ) {
+        messageDecisionsTotal.inc({
+          decision: 'skipped',
+          reason: decision.reason,
+          channel_id: message.channelId,
+          profile_id: profile.id,
+        });
+        logger
+          .withMetadata({
+            event: 'message_skipped',
+            profile_id: profile.id,
+            channel_id: message.channelId,
+            author_name: message.author.username,
+            content_preview: message.content.substring(0, 100),
+            reason: decision.reason,
+          })
+          .info('Message skipped');
+      } else if (VERBOSE_LOGGING) {
         logger
           .withMetadata({
             profile_id: profile.id,
             reason: decision.reason,
             channel_id: message.channelId,
             author: message.author.username,
-            content_preview: message.content.substring(0, 80),
           })
           .info('Not responding to message');
       } else {
@@ -160,17 +183,23 @@ export class MessageHandler {
             content_preview: message.content.substring(0, 80),
           })
           .warn('LLM returned IGNORE for a direct @mention — this is a prompt compliance failure');
-      } else if (VERBOSE_LOGGING) {
+      } else {
+        messageDecisionsTotal.inc({
+          decision: 'skipped',
+          reason: 'llm_ignored',
+          channel_id: message.channelId,
+          profile_id: profile.id,
+        });
         logger
           .withMetadata({
+            event: 'message_skipped',
             profile_id: profile.id,
             channel_id: message.channelId,
-            author: message.author.username,
-            content_preview: message.content.substring(0, 80),
+            author_name: message.author.username,
+            content_preview: message.content.substring(0, 100),
+            reason: 'llm_ignored',
           })
-          .info('LLM chose to stay silent (IGNORE)');
-      } else {
-        logger.withMetadata({ profile_id: profile.id }).debug('LLM decided to ignore');
+          .info('Message skipped (LLM chose silence)');
       }
       return;
     }
@@ -182,6 +211,12 @@ export class MessageHandler {
       try {
         await this.sendResponse(profile, message, responseContent);
         getBotActivityTracker('bot_activity').onResponseSent(true);
+        messageDecisionsTotal.inc({
+          decision: 'responded',
+          reason: decision.reason,
+          channel_id: message.channelId,
+          profile_id: profile.id,
+        });
       } catch (sendError) {
         getBotActivityTracker('bot_activity').onResponseSent(false, 'send_failed');
         throw sendError;
@@ -210,8 +245,12 @@ export class MessageHandler {
 
       logger
         .withMetadata({
+          event: 'message_responded',
           profile_id: profile.id,
           channel_id: message.channelId,
+          author_name: message.author.username,
+          content_preview: message.content.substring(0, 100),
+          response_preview: responseContent.substring(0, 100),
           response_length: responseContent.length,
           reason: decision.reason,
         })
