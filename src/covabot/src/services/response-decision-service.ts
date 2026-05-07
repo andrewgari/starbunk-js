@@ -47,8 +47,9 @@ export class ResponseDecisionService {
       .debug('Evaluating response decision');
 
     // Step 1: Hard filters — structural rejections that need no LLM input
-    if (this.shouldIgnore(profile, message, botUserId)) {
-      return { shouldRespond: false, reason: 'ignored' };
+    const ignoreReason = this.shouldIgnore(profile, message, botUserId);
+    if (ignoreReason) {
+      return { shouldRespond: false, reason: ignoreReason };
     }
 
     // Step 2: Direct @mention — bypass rate limits, the user explicitly addressed us
@@ -86,7 +87,7 @@ export class ResponseDecisionService {
       } else {
         logger.withMetadata(meta).debug('Social battery depleted');
       }
-      return { shouldRespond: false, reason: 'ignored' };
+      return { shouldRespond: false, reason: 'rate_limited' };
     }
 
     // Step 4: Everything else — LLM decides via IGNORE marker with full context signals
@@ -107,22 +108,26 @@ export class ResponseDecisionService {
     return { shouldRespond: true, reason: 'llm_response' };
   }
 
-  private shouldIgnore(profile: CovaProfile, message: Message, botUserId: string): boolean {
+  private shouldIgnore(
+    profile: CovaProfile,
+    message: Message,
+    botUserId: string,
+  ): 'self_message' | 'bot_author' | 'empty_message' | null {
     if (message.author.id === botUserId) {
       logger.withMetadata({ profile_id: profile.id }).debug('Ignoring self-message');
-      return true;
+      return 'self_message';
     }
 
     if (profile.ignoreBots && message.author.bot && !e2eAllowedBotIds.has(message.author.id)) {
       logger
         .withMetadata({ profile_id: profile.id, author_id: message.author.id })
         .debug('Ignoring bot message');
-      return true;
+      return 'bot_author';
     }
 
     if (!message.content || message.content.trim().length === 0) {
       logger.withMetadata({ profile_id: profile.id }).debug('Ignoring empty message');
-      return true;
+      return 'empty_message';
     }
 
     if (VERBOSE_LOGGING) {
@@ -136,7 +141,7 @@ export class ResponseDecisionService {
         .info('Message passed hard filters — evaluating');
     }
 
-    return false;
+    return null;
   }
 
   private isDirectMention(message: Message, botUserId: string): boolean {

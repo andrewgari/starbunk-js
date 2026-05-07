@@ -263,6 +263,7 @@ actionlint
 !src/**/CLAUDE.md
 !.claude/commands/*.md
 !.claude/skills/**/*.md
+!.changeset/*.md
 # Personality config markdown files (not documentation — loaded as system prompt)
 !src/covabot/config/personalities/**/*.md
 

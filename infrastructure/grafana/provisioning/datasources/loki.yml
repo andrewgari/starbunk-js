@@ -1,0 +1,11 @@
+apiVersion: 1
+
+datasources:
+  - name: Starbunk Loki
+    type: loki
+    access: proxy
+    url: http://starbunk-loki:3100
+    uid: starbunk-loki
+    jsonData:
+      maxLines: 1000
+      timeout: 60

@@ -99,7 +99,14 @@ export interface InterestMatch {
 
 // ─── Decision Types ───────────────────────────────────────────────────────
 
-export type ResponseReason = 'direct_mention' | 'llm_response' | 'ignored';
+export type ResponseReason =
+  | 'direct_mention' // respond: user @mentioned the bot
+  | 'llm_response' // respond: passed to LLM for engagement decision
+  | 'self_message' // skip: bot's own message
+  | 'bot_author' // skip: message from another bot
+  | 'empty_message' // skip: no content
+  | 'rate_limited' // skip: social battery depleted
+  | 'llm_ignored'; // skip: LLM chose to stay silent
 
 export interface ResponseDecision {
   shouldRespond: boolean;

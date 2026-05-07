@@ -17,6 +17,7 @@ import { runSmokeMode } from '@starbunk/shared/health/smoke-mode';
 import { initializeHealthServer } from '@starbunk/shared/health/health-server-init';
 import { setApplicationHealth } from '@starbunk/shared/observability/health-server';
 import { shutdownObservability } from '@starbunk/shared/observability/shutdown';
+import { getMetricsService } from '@starbunk/shared/observability/metrics-service';
 import { CovaBot, CovaBotConfig } from './cova-bot';
 import { registerDependencyHealthChecks } from '@starbunk/shared/health/dependency-health';
 import { registerConfigHealthCheck } from '@starbunk/shared/health/config-health';
@@ -91,6 +92,10 @@ async function main(): Promise<void> {
     cloudLlmApiKey,
     cloudLlmDefaultModel: process.env.CLOUD_LLM_DEFAULT_MODEL,
   };
+
+  // Initialize MetricsService with the correct service name BEFORE anything calls
+  // getMetricsService() without a name (e.g. health server, covabot-metrics module).
+  getMetricsService('covabot');
 
   // Initialize and start the bot
   const bot = CovaBot.getInstance(botConfig);
