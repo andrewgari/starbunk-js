@@ -79,6 +79,7 @@ config.json
 !.changeset/config.json
 bots.yml
 prometheus.yml
+!infrastructure/**/prometheus.yml
 
 # ==========================================
 # RUNTIME & PROCESS FILES
@@ -261,6 +262,7 @@ actionlint
 !CLAUDE.md
 !src/**/CLAUDE.md
 !.claude/commands/*.md
+!.claude/skills/**/*.md
 # Personality config markdown files (not documentation — loaded as system prompt)
 !src/covabot/config/personalities/**/*.md
 

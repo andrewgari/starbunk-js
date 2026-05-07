@@ -90,6 +90,16 @@ jobs:
             docker-compose.yml \
             "${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:${{ vars.PROD_DOCKER_COMPOSE_DIR }}/docker-compose.yml.incoming"
 
+      - name: Sync infrastructure files to Tower
+        run: |
+          # Sync infrastructure/ (Grafana dashboards, provisioning, Prometheus config, etc.)
+          # to PROD_DOCKER_COMPOSE_DIR/infrastructure/ so bind mounts are always up to date.
+          # Grafana hot-reloads dashboard JSON files every 30s — no restart needed.
+          rsync -az --delete \
+            -e "ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=accept-new -o ConnectTimeout=30" \
+            infrastructure/ \
+            "${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:${{ vars.PROD_DOCKER_COMPOSE_DIR }}/infrastructure/"
+
       - name: Notify — deploy started
         if: vars.DISCORD_NOTIFY_USER_ID != ''
         uses: ./.github/actions/discord-dm
