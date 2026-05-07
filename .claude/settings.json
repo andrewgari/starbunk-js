@@ -50,10 +50,10 @@
       "Bash(bash scripts/bump-versions.sh:*)",
       "Bash(cat .github/workflows/*.yml)",
       "Bash(grep:*)",
-      "Bash(find /mnt/data/tank/workspace/starbunk-js/src -name \"*.ts\" -type f ! -path \"*/node_modules/*\" -exec grep -l \"discord.*reply\\|send.*message\" {} \\;)",
-      "Bash(find /mnt/data/tank/workspace/starbunk-js/src -name \"*.ts\" -type f -exec grep -l \"trackCommand\\|command\\|slash\" {} \\;)",
-      "Bash(mkdir -p /mnt/data/tank/workspace/starbunk-js/infrastructure/grafana/provisioning/dashboards /mnt/data/tank/workspace/starbunk-js/infrastructure/grafana/provisioning/datasources /mnt/data/tank/workspace/starbunk-js/infrastructure/grafana/dashboards)",
-      "Bash(mkdir -p /mnt/data/tank/workspace/starbunk-js/.claude/skills/create-dashboard)"
+      "Bash(find src -name \"*.ts\" -type f ! -path \"*/node_modules/*\" -exec grep -l \"discord.*reply\\|send.*message\" {} \\;)",
+      "Bash(find src -name \"*.ts\" -type f -exec grep -l \"trackCommand\\|command\\|slash\" {} \\;)",
+      "Bash(mkdir -p infrastructure/grafana/provisioning/dashboards infrastructure/grafana/provisioning/datasources infrastructure/grafana/dashboards)",
+      "Bash(mkdir -p .claude/skills/create-dashboard)"
     ]
   }
 }
