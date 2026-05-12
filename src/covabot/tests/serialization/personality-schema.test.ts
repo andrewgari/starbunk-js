@@ -235,7 +235,7 @@ describe('personality-schema', () => {
       expect(result.data).toEqual({
         model: 'gpt-4o-mini',
         temperature: 0.4,
-        max_tokens: 512,
+        max_tokens: 1024,
       });
     });
 
@@ -331,7 +331,7 @@ describe('personality-schema', () => {
       expect(result.data?.llm).toEqual({
         model: 'gpt-4o-mini',
         temperature: 0.4,
-        max_tokens: 512,
+        max_tokens: 1024,
       });
       expect(result.data?.ignore_bots).toBe(true);
     });
