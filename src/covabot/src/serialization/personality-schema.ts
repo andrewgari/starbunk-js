@@ -84,7 +84,7 @@ export const socialBatterySchema = z.object({
 export const llmConfigSchema = z.object({
   model: z.string().default('gpt-4o-mini').describe('OpenAI model to use'),
   temperature: z.number().min(0).max(2).default(0.4).describe('Response creativity'),
-  max_tokens: z.number().int().positive().default(256).describe('Maximum response length'),
+  max_tokens: z.number().int().positive().default(1024).describe('Maximum response length'),
 });
 
 // Full profile schema
@@ -106,7 +106,7 @@ export const profileSchema = z.object({
   llm: llmConfigSchema.default({
     model: 'gpt-4o-mini',
     temperature: 0.4,
-    max_tokens: 256,
+    max_tokens: 1024,
   }),
   memory: memoryConfigSchema.default({ channel_window: 8 }),
   ignore_bots: z.boolean().default(true).describe('Whether to ignore messages from other bots'),
