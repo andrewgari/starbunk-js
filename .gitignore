@@ -266,6 +266,8 @@ actionlint
 !.changeset/*.md
 # Personality config markdown files (not documentation — loaded as system prompt)
 !src/covabot/config/personalities/**/*.md
+# Changeset-generated changelogs (committed as part of version bump)
+!src/*/CHANGELOG.md
 
 # ==========================================
 # PROJECT-SPECIFIC: WIKI
