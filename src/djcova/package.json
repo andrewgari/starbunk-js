@@ -1,6 +1,6 @@
 {
   "name": "@starbunk/djcova",
-  "version": "1.31.0",
+  "version": "1.31.1",
   "description": "DJCova - Music service container",
   "main": "dist/index.js",
   "scripts": {
@@ -22,7 +22,7 @@
     "@discordjs/builders": "^1.6.5",
     "@discordjs/rest": "^2.5.0",
     "@discordjs/voice": "^0.18.0",
-    "@starbunk/shared": "1.31.0",
+    "@starbunk/shared": "1.31.1",
     "chalk": "^4.1.2",
     "discord-api-types": "^0.38.23",
     "discord.js": "^14.26.3",
