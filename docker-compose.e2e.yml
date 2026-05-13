@@ -22,16 +22,6 @@ services:
       timeout: 3s
       retries: 10
 
-  starbunk-qdrant:
-    image: qdrant/qdrant:v1.7.4
-    healthcheck:
-      # Qdrant v1.7.4 image has no wget/curl/nc — use bash's built-in TCP check
-      test: ["CMD-SHELL", "bash -c '</dev/tcp/localhost/6333' 2>/dev/null && exit 0 || exit 1"]
-      interval: 5s
-      timeout: 5s
-      start_period: 30s
-      retries: 20
-
   # ─── Bots ─────────────────────────────────────────────────────────────────────
 
   bunkbot:
@@ -80,13 +70,10 @@ services:
         condition: service_healthy
       starbunk-redis:
         condition: service_healthy
-      starbunk-qdrant:
-        condition: service_healthy
     environment:
       DISCORD_TOKEN: ${E2E_COVABOT_TOKEN}
       DATABASE_URL: postgresql://starbunk:${POSTGRES_PASSWORD:-starbunk_e2e}@starbunk-postgres:5432/starbunk
       REDIS_URL: redis://starbunk-redis:6379
-      QDRANT_URL: http://starbunk-qdrant:6333
       E2E_ALLOWED_BOT_IDS: ${E2E_DISCORD_SENDER_BOT_ID}
       # Force all trigger response_chance values to 1.0 so tests are deterministic
       COVABOT_E2E_RESPONSE_CHANCE_OVERRIDE: "1.0"

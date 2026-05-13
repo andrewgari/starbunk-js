@@ -16,7 +16,7 @@ CovaBot acts as the AI personality for StarBunk, supplying context-aware, LLM-dr
 
 ## Dependencies & Architecture
 - **Primary Dependencies:** LLM APIs (Ollama primary, OpenAI fallback), Postgres (conversation memory + social battery).
-- Redis and Qdrant have been removed — social battery is stored in Postgres; interest matching uses keyword-based scoring.
+- Redis is optional — social battery is stored in Postgres; interest matching uses keyword-based scoring.
 - Scaled for LLM interactions. API calls should be heavily asynchronous and timeout-resistant.
 
 ## Edge Cases to Consider

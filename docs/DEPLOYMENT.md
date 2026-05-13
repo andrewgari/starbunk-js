@@ -195,7 +195,6 @@ cd /mnt/user/appdata/starbunk
 mkdir -p config/bunkbot
 mkdir -p data/postgres
 mkdir -p data/redis
-mkdir -p data/qdrant
 mkdir -p data/djcova/cache
 mkdir -p data/djcova/temp
 mkdir -p backups
