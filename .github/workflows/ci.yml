@@ -292,7 +292,7 @@ jobs:
         if: steps.preflight.outputs.run_e2e == 'true'
         run: |
           # Always start infrastructure services; start bot containers only for changed apps
-          SERVICES="starbunk-postgres starbunk-redis starbunk-qdrant"
+          SERVICES="starbunk-postgres starbunk-redis"
           for APP in $(echo '${{ needs.changes.outputs.changed_apps }}' | jq -r '.[]'); do
             SERVICES="$SERVICES $APP"
           done

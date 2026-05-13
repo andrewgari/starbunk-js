@@ -23,8 +23,6 @@ export interface DependencyHealthOptions {
   };
   /** Redis URL (e.g. "redis://host:6379") — omit to skip */
   redisUrl?: string;
-  /** Qdrant base URL (e.g. "http://host:6333") — omit to skip */
-  qdrantUrl?: string;
 }
 
 async function pingPostgres(
@@ -83,31 +81,16 @@ async function pingRedis(url: string): Promise<DependencyResult> {
   }
 }
 
-async function pingQdrant(baseUrl: string): Promise<DependencyResult> {
-  const start = Date.now();
-  try {
-    const response = await fetch(`${baseUrl}/healthz`, {
-      signal: AbortSignal.timeout(3000),
-    });
-    if (!response.ok) {
-      return { status: 'error', latency_ms: Date.now() - start, error: `HTTP ${response.status}` };
-    }
-    return { status: 'ok', latency_ms: Date.now() - start };
-  } catch (err) {
-    return { status: 'error', latency_ms: Date.now() - start, error: (err as Error).message };
-  }
-}
-
 /**
  * Register a HealthCheckModule that pings configured external dependencies
- * (Postgres, Redis, Qdrant) and reports their status under /health.
+ * (Postgres, Redis) and reports their status under /health.
  *
  * Only dependencies with options provided are checked. The module name is
  * `'dependencies'` and will replace any previously registered module with
  * that name.
  */
 export function registerDependencyHealthChecks(options: DependencyHealthOptions): void {
-  if (!options.postgres && !options.redisUrl && !options.qdrantUrl) {
+  if (!options.postgres && !options.redisUrl) {
     logger.warn('registerDependencyHealthChecks called with no dependencies configured — skipping');
     return;
   }
@@ -145,19 +128,6 @@ export function registerDependencyHealthChecks(options: DependencyHealthOptions)
         );
       }
 
-      if (options.qdrantUrl) {
-        const url = options.qdrantUrl;
-        checks.push(
-          pingQdrant(url)
-            .then(r => {
-              results['qdrant'] = r;
-            })
-            .catch(err => {
-              results['qdrant'] = { status: 'error', error: (err as Error).message };
-            }),
-        );
-      }
-
       await Promise.allSettled(checks);
 
       const anyError = Object.values(results).some(r => r.status === 'error');
@@ -171,7 +141,6 @@ export function registerDependencyHealthChecks(options: DependencyHealthOptions)
   const configured = [
     options.postgres ? 'postgres' : null,
     options.redisUrl ? 'redis' : null,
-    options.qdrantUrl ? 'qdrant' : null,
   ].filter(Boolean);
   logger.withMetadata({ dependencies: configured }).info('Dependency health checks registered');
 }

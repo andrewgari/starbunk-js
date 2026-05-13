@@ -114,7 +114,7 @@ async function main(): Promise<void> {
   // Register config validation health check
   registerConfigHealthCheck(['DISCORD_TOKEN'], 'covabot');
 
-  // Register dependency health checks for Postgres, Redis, Qdrant if configured
+  // Register dependency health checks for Postgres and Redis if configured
   const postgresHost = process.env.POSTGRES_HOST;
   if (postgresHost) {
     registerDependencyHealthChecks({
@@ -126,7 +126,6 @@ async function main(): Promise<void> {
         password: process.env.POSTGRES_PASSWORD || '',
       },
       redisUrl: process.env.REDIS_URL,
-      qdrantUrl: process.env.QDRANT_URL,
     });
   }
 

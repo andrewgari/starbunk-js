@@ -21,7 +21,6 @@ export interface SimulacrumProfile {
 
   // 2. Cognitive Filter (The Saliency Check)
   saliency: {
-    qdrantCollection: string; // Which interest-vector set to use
     interestThreshold: number; // 0.0 to 1.0 (Higher = more selective)
     randomChimeRate: number; // 0.0 to 0.1 (Probability to "lurk" and speak anyway)
   };
