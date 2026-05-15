@@ -65,6 +65,13 @@ describe('Conditions', () => {
 
       expect(condition(message as Message)).toBe(true);
     });
+
+    it('should still match a word immediately after a parenthesised URL', () => {
+      const message = createMockMessage('(https://example.com)banana');
+      const condition = containsWord('banana');
+
+      expect(condition(message as Message)).toBe(true);
+    });
   });
 
   describe('containsPhrase', () => {

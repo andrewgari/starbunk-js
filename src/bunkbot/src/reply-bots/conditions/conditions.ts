@@ -41,7 +41,7 @@ export const not =
  * Specific Condition Sensors
  */
 
-const URL_PATTERN = /https?:\/\/\S+/gi;
+const URL_PATTERN = /https?:\/\/[^\s)\]>,"']+/gi;
 const stripUrls = (text: string): string => text.replace(URL_PATTERN, '');
 
 // Scenario 1: Someone says a specific word (exact match)
