@@ -40,7 +40,7 @@ profile:
   llm:
     model: "gpt-4o-mini"
     temperature: 0.4
-    max_tokens: 256
+    max_tokens: 1000
 
   memory:
     channel_window: 8

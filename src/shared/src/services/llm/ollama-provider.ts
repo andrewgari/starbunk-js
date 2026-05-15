@@ -90,7 +90,7 @@ export class OllamaProvider implements LlmProvider {
       stream: false,
       options: {
         temperature: options.temperature ?? 0.7,
-        num_predict: options.maxTokens ?? 500,
+        num_predict: options.maxTokens ?? 1000,
       },
     };
 

@@ -70,7 +70,7 @@ export class AnthropicProvider implements LlmProvider {
     const body: Record<string, unknown> = {
       model,
       messages: conversationMessages,
-      max_tokens: options.maxTokens ?? 500,
+      max_tokens: options.maxTokens ?? 1000,
       temperature: options.temperature ?? 0.7,
     };
     if (systemMessage) {
