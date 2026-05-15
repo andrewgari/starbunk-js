@@ -1,5 +1,14 @@
 import { describe, it, expect } from 'vitest';
-import { containsWord, containsPhrase, fromUser, withChance, matchesPattern, and, or, not } from '@/reply-bots/conditions/conditions';
+import {
+  containsWord,
+  containsPhrase,
+  fromUser,
+  withChance,
+  matchesPattern,
+  and,
+  or,
+  not,
+} from '@/reply-bots/conditions/conditions';
 import { Message } from 'discord.js';
 
 // Helper to create a mock message
@@ -42,6 +51,20 @@ describe('Conditions', () => {
       // Should NOT match because "banana" is part of "bananasplit"
       expect(condition(message as Message)).toBe(false);
     });
+
+    it('should not match a word that only appears inside a URL', () => {
+      const message = createMockMessage('check https://banana.com/buy');
+      const condition = containsWord('banana');
+
+      expect(condition(message as Message)).toBe(false);
+    });
+
+    it('should still match a word that appears outside a URL', () => {
+      const message = createMockMessage('banana https://example.com/buy');
+      const condition = containsWord('banana');
+
+      expect(condition(message as Message)).toBe(true);
+    });
   });
 
   describe('containsPhrase', () => {
@@ -61,6 +84,20 @@ describe('Conditions', () => {
 
     it('should match case-insensitively', () => {
       const message = createMockMessage('TEST MESSAGE here');
+      const condition = containsPhrase('test message');
+
+      expect(condition(message as Message)).toBe(true);
+    });
+
+    it('should not match a phrase that only appears inside a URL', () => {
+      const message = createMockMessage('see https://example.com/test-message/foo');
+      const condition = containsPhrase('test-message');
+
+      expect(condition(message as Message)).toBe(false);
+    });
+
+    it('should still match a phrase that appears outside a URL', () => {
+      const message = createMockMessage('test message https://example.com/foo');
       const condition = containsPhrase('test message');
 
       expect(condition(message as Message)).toBe(true);
@@ -117,26 +154,34 @@ describe('Conditions', () => {
 
       expect(condition(message as Message)).toBe(false);
     });
+
+    it('should not match a pattern that only appears inside a URL', () => {
+      const message = createMockMessage('visit https://test@example.com');
+      const condition = matchesPattern('[a-z]+@[a-z]+\\.[a-z]+');
+
+      expect(condition(message as Message)).toBe(false);
+    });
+
+    it('should still match a pattern that appears outside a URL', () => {
+      const message = createMockMessage('email me at test@example.com or visit https://site.com');
+      const condition = matchesPattern('[a-z]+@[a-z]+\\.[a-z]+');
+
+      expect(condition(message as Message)).toBe(true);
+    });
   });
 
   describe('Logical Operators', () => {
     describe('and', () => {
       it('should return true when all conditions are true', async () => {
         const message = createMockMessage('I love banana', '123');
-        const condition = and(
-          containsWord('banana'),
-          fromUser('123')
-        );
+        const condition = and(containsWord('banana'), fromUser('123'));
 
         expect(await condition(message as Message)).toBe(true);
       });
 
       it('should return false when any condition is false', async () => {
         const message = createMockMessage('I love banana', '456');
-        const condition = and(
-          containsWord('banana'),
-          fromUser('123')
-        );
+        const condition = and(containsWord('banana'), fromUser('123'));
 
         expect(await condition(message as Message)).toBe(false);
       });
@@ -145,20 +190,14 @@ describe('Conditions', () => {
     describe('or', () => {
       it('should return true when at least one condition is true', async () => {
         const message = createMockMessage('I love apples', '123');
-        const condition = or(
-          containsWord('banana'),
-          fromUser('123')
-        );
+        const condition = or(containsWord('banana'), fromUser('123'));
 
         expect(await condition(message as Message)).toBe(true);
       });
 
       it('should return false when all conditions are false', async () => {
         const message = createMockMessage('I love apples', '456');
-        const condition = or(
-          containsWord('banana'),
-          fromUser('123')
-        );
+        const condition = or(containsWord('banana'), fromUser('123'));
 
         expect(await condition(message as Message)).toBe(false);
       });
@@ -181,4 +220,3 @@ describe('Conditions', () => {
     });
   });
 });
-

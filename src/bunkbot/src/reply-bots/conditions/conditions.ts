@@ -41,10 +41,14 @@ export const not =
  * Specific Condition Sensors
  */
 
+const URL_PATTERN = /https?:\/\/\S+/gi;
+const stripUrls = (text: string): string => text.replace(URL_PATTERN, '');
+
 // Scenario 1: Someone says a specific word (exact match)
 export const containsWord = (word: string) => (message: Message) => {
+  const strippedContent = stripUrls(message.content);
   const regex = new RegExp(`\\b${word}\\b`, 'i');
-  const matches = regex.test(message.content);
+  const matches = regex.test(strippedContent);
   if (matches) {
     logger
       .withMetadata({
@@ -59,7 +63,8 @@ export const containsWord = (word: string) => (message: Message) => {
 
 // Scenario 1: Someone says a phrase (partial match)
 export const containsPhrase = (phrase: string) => (message: Message) => {
-  const matches = message.content.toLowerCase().includes(phrase.toLowerCase());
+  const strippedContent = stripUrls(message.content);
+  const matches = strippedContent.toLowerCase().includes(phrase.toLowerCase());
   if (matches) {
     logger
       .withMetadata({
@@ -104,8 +109,9 @@ export const withChance = (percent: number) => () => {
 
 // Advanced: Regex Pattern matching
 export const matchesPattern = (pattern: string) => (message: Message) => {
+  const strippedContent = stripUrls(message.content);
   const regex = new RegExp(pattern, 'i');
-  const matches = regex.test(message.content);
+  const matches = regex.test(strippedContent);
   if (matches) {
     logger
       .withMetadata({
