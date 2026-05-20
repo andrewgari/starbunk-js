@@ -70,6 +70,7 @@ export class OpenAIProvider implements LlmProvider {
       model: completion.model,
       tokensUsed,
       provider: this.name,
+      // OpenAI SDK types finish_reason as string | null; ?? undefined normalises null → undefined
       finishReason: completion.choices[0]?.finish_reason ?? undefined,
     };
   }

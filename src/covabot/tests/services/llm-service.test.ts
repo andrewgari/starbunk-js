@@ -139,6 +139,58 @@ describe('LlmService', () => {
     expect(svc.getProviderManager()).toBeDefined();
   });
 
+  it('suppresses response when finishReason is max_tokens (Anthropic truncation)', async () => {
+    const { LlmProviderManager } = await import('@starbunk/shared');
+    vi.spyOn(LlmProviderManager.prototype as any, 'generateCompletion').mockResolvedValue({
+      content: 'This sentence was cut off mid',
+      tokensUsed: 128,
+      model: 'claude-3-sonnet',
+      provider: 'anthropic',
+      finishReason: 'max_tokens',
+    });
+
+    const svc = new LlmService();
+    const res = await svc.generateResponse(baseProfile, baseContext, 'Tell me more', 'Alice');
+    expect(res.shouldIgnore).toBe(true);
+    expect(res.content).toBe('');
+    expect(res.tokensUsed).toBe(128);
+    expect(res.provider).toBe('anthropic');
+  });
+
+  it('suppresses response when finishReason is length (Ollama/OpenAI/Gemini truncation)', async () => {
+    const { LlmProviderManager } = await import('@starbunk/shared');
+    vi.spyOn(LlmProviderManager.prototype as any, 'generateCompletion').mockResolvedValue({
+      content: 'This sentence was also cut',
+      tokensUsed: 64,
+      model: 'gemini-2.5-flash',
+      provider: 'gemini',
+      finishReason: 'length',
+    });
+
+    const svc = new LlmService();
+    const res = await svc.generateResponse(baseProfile, baseContext, 'Tell me more', 'Alice');
+    expect(res.shouldIgnore).toBe(true);
+    expect(res.content).toBe('');
+    expect(res.tokensUsed).toBe(64);
+    expect(res.provider).toBe('gemini');
+  });
+
+  it('does not suppress response when finishReason is stop (normal completion)', async () => {
+    const { LlmProviderManager } = await import('@starbunk/shared');
+    vi.spyOn(LlmProviderManager.prototype as any, 'generateCompletion').mockResolvedValue({
+      content: 'This Is A COMPLETE RESPONSE',
+      tokensUsed: 20,
+      model: 'fake-model',
+      provider: 'fake-provider',
+      finishReason: 'stop',
+    });
+
+    const svc = new LlmService();
+    const res = await svc.generateResponse(baseProfile, baseContext, 'Hello?', 'Alice');
+    expect(res.shouldIgnore).toBe(false);
+    expect(res.content).toBe('this is a complete response');
+  });
+
   it('rethrows on provider failure', async () => {
     const { LlmProviderManager } = await import('@starbunk/shared');
     vi.spyOn(LlmProviderManager.prototype as any, 'generateCompletion').mockRejectedValue(

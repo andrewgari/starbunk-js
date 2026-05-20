@@ -42,7 +42,10 @@ export class LlmProviderManager {
    * Initialize providers in priority order
    */
   private initializeProviders(config?: LlmProviderConfig): void {
-    // 1. Google Gemini (primary — capable models, generous token limits)
+    // 1. Google Gemini (primary — capable models, generous default token limits)
+    // Trade-off: cloud API call (requires GEMINI_API_KEY, not private). Ollama was previously
+    // primary because it is local and free; Gemini is now preferred for its higher token ceiling
+    // which reduces truncation. Users without a Gemini key fall back to Ollama automatically.
     const gemini = new GeminiProvider(config?.geminiApiKey, config?.geminiDefaultModel);
     if (gemini.isAvailable()) {
       this.providers.push(gemini);

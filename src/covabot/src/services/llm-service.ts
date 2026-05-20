@@ -117,8 +117,7 @@ export class LlmService {
       const duration = Date.now() - startTime;
 
       // A truncated response means the model was cut off mid-sentence — suppress it
-      // rather than sending an incomplete message. Values: Anthropic='max_tokens',
-      // Ollama='length', OpenAI/Gemini='length'.
+      // rather than sending an incomplete message to Discord.
       const wasTruncated = result.finishReason === 'max_tokens' || result.finishReason === 'length';
       if (wasTruncated) {
         logger
