@@ -1,6 +1,6 @@
 {
   "name": "@starbunk/covabot",
-  "version": "1.35.0",
+  "version": "1.36.0",
   "description": "CovaBot v2 - Multi-persona Discord Bot with PostgreSQL persistence",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -17,7 +17,7 @@
     "lint:fix": "eslint --ext .ts src --fix"
   },
   "dependencies": {
-    "@starbunk/shared": "1.31.4",
+    "@starbunk/shared": "1.32.0",
     "discord.js": "^14.26.3",
     "dotenv": "^16.5.0",
     "js-yaml": "^4.1.0",

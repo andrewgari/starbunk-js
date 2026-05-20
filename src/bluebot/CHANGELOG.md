@@ -1,5 +1,14 @@
 # @starbunk/bluebot
 
+## 1.31.5
+
+### Patch Changes
+
+- Updated dependencies [ccb4863]
+- Updated dependencies [7eddc30]
+- Updated dependencies [a95ddca]
+  - @starbunk/shared@1.32.0
+
 ## 1.31.4
 
 ### Patch Changes
