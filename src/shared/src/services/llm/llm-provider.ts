@@ -23,6 +23,8 @@ export interface LlmCompletionResult {
   model: string;
   tokensUsed?: number;
   provider: string;
+  /** The reason the model stopped generating. 'max_tokens'/'length' means the response was cut off. */
+  finishReason?: string;
 }
 
 /**

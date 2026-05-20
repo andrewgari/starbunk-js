@@ -62,6 +62,7 @@ export class GeminiProvider implements LlmProvider {
       model: completion.model,
       tokensUsed,
       provider: this.name,
+      finishReason: completion.choices[0]?.finish_reason ?? undefined,
     };
   }
 }
