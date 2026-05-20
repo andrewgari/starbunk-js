@@ -62,6 +62,8 @@ export class GeminiProvider implements LlmProvider {
       model: completion.model,
       tokensUsed,
       provider: this.name,
+      // Gemini uses the OpenAI-compat endpoint; finish_reason is string | null — normalise to undefined
+      finishReason: completion.choices[0]?.finish_reason ?? undefined,
     };
   }
 }

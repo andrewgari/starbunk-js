@@ -26,6 +26,7 @@ interface OllamaChatResponse {
     content: string;
   };
   done: boolean;
+  done_reason?: string;
   total_duration?: number;
   prompt_eval_count?: number;
   eval_count?: number;
@@ -116,6 +117,7 @@ export class OllamaProvider implements LlmProvider {
       model: data.model,
       tokensUsed,
       provider: this.name,
+      finishReason: data.done_reason,
     };
   }
 }

@@ -116,6 +116,29 @@ export class LlmService {
       const tokensUsed = result.tokensUsed || 0;
       const duration = Date.now() - startTime;
 
+      // A truncated response means the model was cut off mid-sentence — suppress it
+      // rather than sending an incomplete message to Discord.
+      const wasTruncated = result.finishReason === 'max_tokens' || result.finishReason === 'length';
+      if (wasTruncated) {
+        logger
+          .withMetadata({
+            profile_id: profile.id,
+            model: result.model,
+            provider: result.provider,
+            tokens_used: tokensUsed,
+            duration_ms: duration,
+            finish_reason: result.finishReason,
+          })
+          .warn('LLM response truncated at token limit — suppressing to avoid mid-sentence cutoff');
+        return {
+          content: '',
+          shouldIgnore: true,
+          tokensUsed,
+          model: result.model,
+          provider: result.provider,
+        };
+      }
+
       // Check for ignore marker
       const shouldIgnore = responseContent.includes(IGNORE_CONVERSATION_MARKER);
 
