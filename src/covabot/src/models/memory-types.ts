@@ -143,14 +143,6 @@ export interface LlmContext {
 
 // ─── Profile Config Types (mirrors YAML schema) ───────────────────────────
 
-export interface BotIdentityConfig {
-  type: 'static' | 'mimic' | 'random';
-  botName?: string;
-  avatarUrl?: string;
-  // as_member intentionally uses snake_case to match the YAML field name
-  as_member?: string;
-}
-
 export interface SpeechPatterns {
   lowercase: boolean;
   sarcasmLevel: number;
@@ -190,9 +182,7 @@ export interface PersonalityConfig {
 export interface ProfileConfig {
   id: string;
   display_name: string;
-  avatar_url?: string;
   name_aliases?: string[];
-  identity: BotIdentityConfig;
   personality: PersonalityConfig;
   social_battery: SocialBatteryConfig;
   memory?: { channel_window?: number };
@@ -210,9 +200,7 @@ export interface ProfileConfig {
 export interface CovaProfile {
   id: string;
   displayName: string;
-  avatarUrl?: string;
   nameAliases: string[]; // names/aliases used to detect when the bot is being addressed
-  identity: BotIdentityConfig;
   personality: {
     systemPrompt: string;
     traits: string[];
