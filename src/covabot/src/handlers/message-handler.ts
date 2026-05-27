@@ -314,6 +314,22 @@ export class MessageHandler {
       botUserId,
     );
 
+    // Build user relationships modifier
+    const relationshipLines: string[] = [];
+    for (let i = 0; i < engagementContext.activeParticipantIds.length; i++) {
+      const pid = engagementContext.activeParticipantIds[i];
+      const pname = engagementContext.activeParticipants[i];
+      const rel = profile.personality.userRelationships[pid];
+      if (rel) {
+        relationshipLines.push(`- ${pname}: ${rel}`);
+      }
+    }
+
+    let userRelationshipsModifier: string | undefined = undefined;
+    if (relationshipLines.length > 0) {
+      userRelationshipsModifier = `Your internal biases towards current participants:\n${relationshipLines.join('\n')}\n(Keep these biases as background knowledge. Do not explicitly state them, just let them naturally influence your tone and behavior.)`;
+    }
+
     if (VERBOSE_LOGGING) {
       logger
         .withMetadata({
@@ -322,6 +338,7 @@ export class MessageHandler {
           history_messages: channelContext.messages.length,
           user_facts_length: userFactsStr.length,
           has_trait_modifiers: !!traitModifiers,
+          has_relationship_modifiers: !!userRelationshipsModifier,
           was_mentioned: engagementContext.wasMentioned,
           name_referenced: engagementContext.nameReferenced,
           is_direct_exchange: engagementContext.isDirectExchange,
@@ -342,6 +359,7 @@ export class MessageHandler {
       userFacts: userFactsStr,
       traitModifiers,
       engagementContext,
+      userRelationshipsModifier,
     };
   }
 
@@ -358,11 +376,13 @@ export class MessageHandler {
     // Find unique human participants in the recent conversation window
     const seenUserIds = new Set<string>();
     const participantNames: string[] = [];
+    const participantIds: string[] = [];
 
     for (const msg of channelContext.messages) {
       if (msg.userId !== botUserId && !seenUserIds.has(msg.userId)) {
         seenUserIds.add(msg.userId);
         participantNames.push(msg.userName || `User-${msg.userId.slice(-4)}`);
+        participantIds.push(msg.userId);
       }
     }
 
@@ -399,6 +419,7 @@ export class MessageHandler {
       nameReferenced,
       isDirectExchange,
       activeParticipants: participantNames,
+      activeParticipantIds: participantIds,
       secondsSinceLastResponse,
       conversationMessageCount: channelContext.messages.length,
     };

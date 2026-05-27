@@ -1,6 +1,6 @@
 {
   "name": "@starbunk/bunkbot",
-  "version": "1.31.4",
+  "version": "1.31.6",
   "description": "BunkBot - Next generation reply bot system",
   "main": "dist/index.js",
   "engines": {
@@ -24,7 +24,7 @@
     "pipeline": "npm run lint && npm run type-check && npm run build && npm run test"
   },
   "dependencies": {
-    "@starbunk/shared": "1.31.4",
+    "@starbunk/shared": "1.33.0",
     "discord.js": "^14.26.3",
     "dotenv": "^17.2.3",
     "js-yaml": "^4.1.1",

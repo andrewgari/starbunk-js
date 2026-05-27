@@ -240,6 +240,11 @@ export class LlmService {
       );
     }
 
+    // User relationships (injected based on active participants)
+    if (context.userRelationshipsModifier) {
+      parts.push(`\n${context.userRelationshipsModifier}`);
+    }
+
     // Speech style
     const styleInstructions = this.buildStyleInstructions(profile);
     if (styleInstructions) {

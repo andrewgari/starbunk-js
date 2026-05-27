@@ -119,6 +119,7 @@ export interface EngagementContext {
   nameReferenced: boolean; // bot name/alias appears in message text
   isDirectExchange: boolean; // only 1-2 unique human speakers in recent history
   activeParticipants: string[]; // display names of recent human speakers
+  activeParticipantIds: string[]; // Discord User IDs of recent human speakers
   secondsSinceLastResponse: number | null;
   conversationMessageCount: number;
 }
@@ -139,6 +140,7 @@ export interface LlmContext {
   userFacts: string;
   traitModifiers: string;
   engagementContext: EngagementContext;
+  userRelationshipsModifier?: string;
 }
 
 // ─── Profile Config Types (mirrors YAML schema) ───────────────────────────
@@ -170,6 +172,7 @@ export interface PersonalityConfig {
   interests: string[];
   topic_affinities?: string[];
   background_facts?: string[];
+  user_relationships?: Record<string, string>;
   speech_patterns: SpeechPatterns;
 }
 
@@ -207,6 +210,7 @@ export interface CovaProfile {
     interests: string[]; // kept for backward compat / InterestService
     topicAffinities: string[]; // engagement signals — not talking points
     backgroundFacts: string[]; // personal details — rarely mentioned
+    userRelationships: Record<string, string>; // specific instructions for specific users
     speechPatterns: SpeechPatterns;
   };
   socialBattery: {

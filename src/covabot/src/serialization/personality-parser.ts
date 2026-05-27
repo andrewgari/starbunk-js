@@ -133,6 +133,41 @@ function loadMarkdownSystemPrompt(dirPath: string): string {
 }
 
 /**
+ * Read relationships.md and parse it into a Record<string, string>.
+ * Format requires Discord User IDs as Markdown headings:
+ * ## 123456789012345678
+ * Relationship instruction here...
+ */
+function loadMarkdownRelationships(dirPath: string): Record<string, string> {
+  const filePath = path.join(dirPath, 'relationships.md');
+  if (!fileExists(filePath)) {
+    return {};
+  }
+
+  const content = readFileUtf8(filePath);
+  const relationships: Record<string, string> = {};
+
+  // Split by headings consisting of 1-6 '#' characters followed by a Discord User ID (digits only).
+  const parts = content.split(/^(?:#{1,6})\s*(\d{17,19})\s*$/m);
+
+  for (let i = 1; i < parts.length; i += 2) {
+    const id = parts[i];
+    const relContent = parts[i + 1]?.trim();
+    if (id && relContent) {
+      relationships[id] = relContent;
+    }
+  }
+
+  if (VERBOSE_LOGGING && Object.keys(relationships).length > 0) {
+    logger
+      .withMetadata({ dir: path.basename(dirPath), count: Object.keys(relationships).length })
+      .info('Markdown relationships loaded');
+  }
+
+  return relationships;
+}
+
+/**
  * Load a single personality from a directory containing profile.yml and optional markdown files.
  * Markdown files take precedence over the system_prompt field in profile.yml.
  */
@@ -141,16 +176,25 @@ export function loadPersonalityFromDirectory(dirPath: string): CovaProfile {
   const baseProfile = parsePersonalityFile(profileFilePath);
 
   const markdownPrompt = loadMarkdownSystemPrompt(dirPath);
-  if (!markdownPrompt) {
+  const markdownRelationships = loadMarkdownRelationships(dirPath);
+
+  const hasMarkdownPrompt = markdownPrompt.length > 0;
+  const hasMarkdownRelationships = Object.keys(markdownRelationships).length > 0;
+
+  if (!hasMarkdownPrompt && !hasMarkdownRelationships) {
     return baseProfile;
   }
 
-  // Overlay the markdown-assembled system prompt onto the frozen base profile
+  // Overlay the markdown-assembled pieces onto the frozen base profile
   return deepFreeze({
     ...baseProfile,
     personality: {
       ...baseProfile.personality,
-      systemPrompt: markdownPrompt,
+      systemPrompt: hasMarkdownPrompt ? markdownPrompt : baseProfile.personality.systemPrompt,
+      userRelationships: {
+        ...baseProfile.personality.userRelationships,
+        ...markdownRelationships,
+      },
     },
   }) as unknown as CovaProfile;
 }
