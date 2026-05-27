@@ -166,12 +166,13 @@ export class CovaBot {
     try {
       this.profile = loadPersonalityFromDirectory(personalityPath);
       logger.withMetadata({ path: personalityPath }).info('Profile loaded');
-    } catch {
+    } catch (error) {
       logger
+        .withError(error)
         .withMetadata({ path: personalityPath })
         .warn(
           'Failed to load personality profile. CovaBot will not respond to any messages. ' +
-            'Create a profile.yml in the personalities path.',
+            'Ensure profile.yml and configuration files are valid.',
         );
       return;
     }
