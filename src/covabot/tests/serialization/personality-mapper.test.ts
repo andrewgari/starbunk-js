@@ -9,12 +9,6 @@ describe('personality-mapper', () => {
     profile: {
       id: 'test-bot',
       display_name: 'Test Bot',
-      avatar_url: 'https://example.com/avatar.png',
-      identity: {
-        type: 'static',
-        botName: 'Test Bot',
-        avatarUrl: 'https://example.com/avatar.png',
-      },
       personality: {
         system_prompt: 'You are a test bot.',
         traits: ['friendly', 'helpful'],
@@ -51,7 +45,6 @@ describe('personality-mapper', () => {
 
       expect(result.id).toBe('test-bot');
       expect(result.displayName).toBe('Test Bot');
-      expect(result.avatarUrl).toBe('https://example.com/avatar.png');
       expect(result.ignoreBots).toBe(true);
     });
 
@@ -122,54 +115,6 @@ describe('personality-mapper', () => {
         lowercase: true,
         sarcasmLevel: 0.3,
         technicalBias: 0.5,
-      });
-    });
-
-    it('should map static identity', () => {
-      const config = createValidConfig({
-        identity: {
-          type: 'static',
-          botName: 'Custom Bot',
-          avatarUrl: 'https://example.com/custom.png',
-        },
-      });
-
-      const result = mapToCovaProfile(config);
-
-      expect(result.identity).toEqual({
-        type: 'static',
-        botName: 'Custom Bot',
-        avatarUrl: 'https://example.com/custom.png',
-      });
-    });
-
-    it('should map mimic identity', () => {
-      const config = createValidConfig({
-        identity: {
-          type: 'mimic',
-          as_member: '123456789012345678',
-        },
-      });
-
-      const result = mapToCovaProfile(config);
-
-      expect(result.identity).toEqual({
-        type: 'mimic',
-        as_member: '123456789012345678',
-      });
-    });
-
-    it('should map random identity', () => {
-      const config = createValidConfig({
-        identity: {
-          type: 'random',
-        },
-      });
-
-      const result = mapToCovaProfile(config);
-
-      expect(result.identity).toEqual({
-        type: 'random',
       });
     });
 

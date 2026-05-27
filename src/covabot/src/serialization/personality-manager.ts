@@ -1,43 +1,35 @@
 import * as fs from 'fs';
 import { LiveData, ReadonlyLiveData, getTraceService } from '@starbunk/shared';
 import { logLayer } from '@starbunk/shared/observability/log-layer';
-import { getDefaultPersonalitiesPath, loadPersonalitiesFromDirectory } from './personality-parser';
+import { getDefaultPersonalityPath, loadPersonalityFromDirectory } from './personality-parser';
 import type { CovaProfile } from '@/models/memory-types';
 
 export interface PersonalityService {
-  getPersonalityById(id: string): CovaProfile | undefined;
-  getPersonalityByName(name: string): CovaProfile | undefined;
-  activatePersonality(personality: CovaProfile): void;
-  getActivePersonality(): CovaProfile | null | undefined;
-  refreshPersonalities(): void;
-  getPersonalitiesLive(): ReadonlyLiveData<readonly CovaProfile[]>;
-  getActivePersonalityLive(): ReadonlyLiveData<CovaProfile | null>;
-  getAllPersonalities(): readonly CovaProfile[];
-  getPersonalityCount(): number;
+  getPersonality(): CovaProfile | null;
+  refreshPersonality(): void;
+  getPersonalityLive(): ReadonlyLiveData<CovaProfile | null>;
 }
 
 export class PersonalityManager implements PersonalityService {
-  private personalities: Map<string, CovaProfile> = new Map();
-  private activePersonality: CovaProfile | null = null;
+  private personality: CovaProfile | null = null;
   private readonly dir: string;
   private readonly logger = logLayer.withPrefix('PersonalityManager');
   private readonly tracing = getTraceService('covabot');
 
   // LiveData streams for observers
-  private readonly personalities$ = new LiveData<readonly CovaProfile[]>([]);
-  private readonly activePersonality$ = new LiveData<CovaProfile | null>(null);
+  private readonly personality$ = new LiveData<CovaProfile | null>(null);
 
   // FS watch support
   private watcher?: fs.FSWatcher;
   private watchDebounce?: NodeJS.Timeout;
 
   constructor(configPath?: string) {
-    this.dir = configPath ?? getDefaultPersonalitiesPath();
+    this.dir = configPath ?? getDefaultPersonalityPath();
     this.loadFromDirectory();
     if (fs.existsSync(this.dir)) {
       this.startWatching();
     } else {
-      this.logger.warn(`Personalities directory '${this.dir}' does not exist; watcher not started`);
+      this.logger.warn(`Personality directory '${this.dir}' does not exist; watcher not started`);
     }
   }
 
@@ -46,14 +38,11 @@ export class PersonalityManager implements PersonalityService {
       'personality.dir': this.dir,
     });
     try {
-      this.personalities.clear();
-      const profiles = loadPersonalitiesFromDirectory(this.dir);
-      for (const profile of profiles) {
-        this.personalities.set(profile.id, profile);
-      }
-      this.publishPersonalities();
+      const profile = loadPersonalityFromDirectory(this.dir);
+      this.personality = profile;
+      this.personality$.setValue(this.personality);
       this.tracing.endSpanSuccess(span, {
-        'personalities.count': this.personalities.size,
+        'personality.id': profile.id,
       });
     } catch (error) {
       this.tracing.endSpanError(span, error as Error);
@@ -61,87 +50,31 @@ export class PersonalityManager implements PersonalityService {
     }
   }
 
-  public getPersonalityById(id: string): CovaProfile | undefined {
-    return this.personalities.get(id);
+  public getPersonality(): CovaProfile | null {
+    return this.personality;
   }
 
-  public getPersonalityByName(name: string): CovaProfile | undefined {
-    for (const personality of this.personalities.values()) {
-      if (personality.displayName === name) {
-        return personality;
-      }
-    }
-    return undefined;
-  }
-
-  public activatePersonality(personality: CovaProfile): void {
-    this.activePersonality = personality;
-    this.activePersonality$.setValue(personality);
-  }
-
-  public getActivePersonality(): CovaProfile | null {
-    return this.activePersonality;
-  }
-
-  public refreshPersonalities(): void {
-    // Atomic refresh: only publish new state after successful load
-    const prevActiveId = this.activePersonality?.id ?? null;
-    const span = this.tracing.startSpan('PersonalityManager.refreshPersonalities', {
+  public refreshPersonality(): void {
+    const span = this.tracing.startSpan('PersonalityManager.refreshPersonality', {
       'personality.dir': this.dir,
-      'personality.prev_active_id': prevActiveId ?? 'null',
     });
     try {
-      const profiles = loadPersonalitiesFromDirectory(this.dir);
-      const nextPersonalities = new Map<string, CovaProfile>();
-      for (const profile of profiles) {
-        nextPersonalities.set(profile.id, profile);
-      }
-
-      // Swap in new state atomically
-      this.personalities = nextPersonalities;
-      this.publishPersonalities();
-
-      // Restore previous active personality if available
-      const restored = prevActiveId ? this.getPersonalityById(prevActiveId) : null;
-      if (prevActiveId && !restored) {
-        this.logger.warn(`Active personality '${prevActiveId}' no longer exists after refresh`);
-      }
-      this.activePersonality = restored ?? null;
-      this.activePersonality$.setValue(this.activePersonality);
+      const profile = loadPersonalityFromDirectory(this.dir);
+      this.personality = profile;
+      this.personality$.setValue(this.personality);
 
       this.tracing.endSpanSuccess(span, {
-        'personalities.count': this.personalities.size,
-        'personality.restored_active_id': this.activePersonality?.id ?? 'null',
+        'personality.id': profile.id,
       });
     } catch (error) {
-      // On failure, keep previous state untouched
-      this.logger.withError(error as Error).error('Failed to refresh personalities');
+      this.logger.withError(error as Error).error('Failed to refresh personality');
       this.tracing.endSpanError(span, error as Error);
     }
   }
 
   // LiveData accessors
-  public getPersonalitiesLive(): ReadonlyLiveData<readonly CovaProfile[]> {
-    return this.personalities$.asReadonly();
-  }
-
-  public getActivePersonalityLive(): ReadonlyLiveData<CovaProfile | null> {
-    return this.activePersonality$.asReadonly();
-  }
-
-  // Convenience accessors maintained for synchronous reads
-  public getAllPersonalities(): readonly CovaProfile[] {
-    return this.personalities$.getValue();
-  }
-
-  public getPersonalityCount(): number {
-    return this.personalities.size;
-  }
-
-  private publishPersonalities(): void {
-    // Ensure a stable array reference only when content changed
-    const next = Array.from(this.personalities.values());
-    this.personalities$.setValue(next);
+  public getPersonalityLive(): ReadonlyLiveData<CovaProfile | null> {
+    return this.personality$.asReadonly();
   }
 
   // ---------------------------------------------------------------------------
@@ -163,14 +96,14 @@ export class PersonalityManager implements PersonalityService {
         if (this.watchDebounce) clearTimeout(this.watchDebounce);
         this.watchDebounce = setTimeout(() => {
           try {
-            this.refreshPersonalities();
+            this.refreshPersonality();
           } catch (err) {
             this.logger.withError(err as Error).error('Auto-refresh failed');
           }
         }, 500);
       });
     } catch (err) {
-      this.logger.withError(err as Error).warn(`Failed to watch personalities directory '${dir}'`);
+      this.logger.withError(err as Error).warn(`Failed to watch personality directory '${dir}'`);
     }
   }
 

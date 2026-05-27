@@ -3,15 +3,7 @@ import * as yaml from 'js-yaml';
 import { logLayer } from '@starbunk/shared/observability/log-layer';
 import type { CovaProfile } from '@/models/memory-types';
 import { VERBOSE_LOGGING } from '@/utils/verbose-mode';
-import {
-  readDirectory,
-  directoryExists,
-  isDirectory,
-  fileExists,
-  createDirectory,
-  readFileUtf8,
-  checkReadAccess,
-} from './file-reader';
+import { fileExists, readFileUtf8 } from './file-reader';
 import { validateOrThrow } from './personality-validator';
 import { mapToCovaProfile } from './personality-mapper';
 import { deepFreeze } from './deep-freeze';
@@ -207,88 +199,7 @@ export function loadPersonalityFromDirectory(dirPath: string): CovaProfile {
   }) as unknown as CovaProfile;
 }
 
-/**
- * Load all personality profiles from a directory.
- *
- * Convention: each personality is a subdirectory containing a `profile.yml`
- * and optional markdown files.
- * Example:
- *   personalities/
- *     cova/
- *       profile.yml
- *       core.md
- *       likes.md
- *       ...
- *
- * The subdirectory name is the deployer's identifier — the display name and
- * character details are defined inside profile.yml and the markdown files.
- */
-export function loadPersonalitiesFromDirectory(dirPath: string): CovaProfile[] {
-  if (!directoryExists(dirPath)) {
-    try {
-      createDirectory(dirPath);
-      logger.withMetadata({ path: dirPath }).info('Created personalities directory');
-    } catch (_err) {
-      throw new PersonalityParserError(`Unable to create directory: ${dirPath}`);
-    }
-    return [];
-  }
-
-  let entries: string[] = [];
-  try {
-    entries = readDirectory(dirPath);
-  } catch (_err) {
-    throw new PersonalityParserError(`Unable to read directory: ${dirPath}`);
-  }
-
-  const profiles: CovaProfile[] = [];
-
-  for (const entry of entries) {
-    const entryPath = path.join(dirPath, entry);
-
-    if (isDirectory(entryPath)) {
-      // Subdirectory format: [name]/profile.yml with optional markdown files
-      try {
-        checkReadAccess(entryPath);
-      } catch {
-        logger
-          .withMetadata({ dir: entry, path: entryPath })
-          .warn('Personality directory is not readable — check file permissions (chmod a+rX)');
-        continue;
-      }
-
-      const profileFilePath = path.join(entryPath, 'profile.yml');
-      if (!fileExists(profileFilePath)) continue;
-
-      try {
-        const profile = loadPersonalityFromDirectory(entryPath);
-        profiles.push(profile);
-        logger.withMetadata({ dir: entry, profileId: profile.id }).info('Loaded personality');
-      } catch (error) {
-        logger
-          .withError(error)
-          .withMetadata({ dir: entry, path: profileFilePath })
-          .error('Failed to load personality');
-      }
-    } else if (entry.endsWith('.yml') || entry.endsWith('.yaml')) {
-      // Flat file format: [name].yml directly in the personalities directory
-      try {
-        const profile = parsePersonalityFile(entryPath);
-        profiles.push(profile);
-        logger.withMetadata({ file: entry, profileId: profile.id }).info('Loaded personality');
-      } catch (error) {
-        logger
-          .withError(error)
-          .withMetadata({ file: entry, path: entryPath })
-          .error('Failed to load personality');
-      }
-    }
-  }
-
-  return profiles;
-}
-
-export function getDefaultPersonalitiesPath(): string {
+export function getDefaultPersonalityPath(): string {
   if (process.env.COVABOT_CONFIG_DIR) {
     return process.env.COVABOT_CONFIG_DIR;
   }

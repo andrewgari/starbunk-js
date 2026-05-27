@@ -4,25 +4,6 @@
 
 import { z } from 'zod';
 
-// Identity discriminated union
-export const identitySchema = z.discriminatedUnion('type', [
-  z.object({
-    type: z.literal('static'),
-    botName: z.string().describe('Display name for the bot'),
-    avatarUrl: z.string().url().optional().describe('Avatar URL for webhook messages'),
-  }),
-  z.object({
-    type: z.literal('mimic'),
-    as_member: z
-      .string()
-      .regex(/^\d{17,19}$/)
-      .describe('Discord User ID to mimic'),
-  }),
-  z.object({
-    type: z.literal('random'),
-  }),
-]);
-
 // Speech patterns
 export const speechPatternsSchema = z.object({
   lowercase: z.boolean().default(false).describe('Force lowercase responses'),
@@ -95,12 +76,10 @@ export const llmConfigSchema = z.object({
 export const profileSchema = z.object({
   id: z.string().describe('Unique internal identifier'),
   display_name: z.string().describe('Display name for Discord'),
-  avatar_url: z.string().url().optional().describe('Avatar URL for webhook'),
   name_aliases: z
     .array(z.string())
     .default([])
     .describe('Names and aliases the bot goes by — used as context signals for the LLM'),
-  identity: identitySchema,
   personality: personalitySchema,
   social_battery: socialBatterySchema.default({
     max_messages: 5,
@@ -123,7 +102,6 @@ export const yamlConfigSchema = z.object({
 
 // Type exports
 export type MemoryConfigType = z.infer<typeof memoryConfigSchema>;
-export type IdentityConfig = z.infer<typeof identitySchema>;
 export type SpeechPatternsConfig = z.infer<typeof speechPatternsSchema>;
 export type PersonalitySchemaType = z.infer<typeof personalitySchema>;
 export type SocialBatterySchemaType = z.infer<typeof socialBatterySchema>;

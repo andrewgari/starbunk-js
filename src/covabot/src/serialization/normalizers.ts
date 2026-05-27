@@ -10,8 +10,8 @@
  * clamp and clamp01 are general utilities exported for testing and ad-hoc use.
  */
 
-import type { BotIdentityConfig, LlmConfig, SpeechPatterns } from '@/models/memory-types';
-import type { IdentityConfig, LlmSchemaType, SpeechPatternsConfig } from './personality-schema';
+import type { LlmConfig, SpeechPatterns } from '@/models/memory-types';
+import type { LlmSchemaType, SpeechPatternsConfig } from './personality-schema';
 
 export function clamp(n: number, min: number, max: number): number {
   if (Number.isNaN(n)) return min;
@@ -29,24 +29,6 @@ export function normalizeSpeechPatterns(sp: SpeechPatternsConfig): SpeechPattern
     sarcasmLevel: clamp(sp.sarcasm_level, 0, 1),
     technicalBias: clamp(sp.technical_bias, 0, 1),
   };
-}
-
-export function normalizeIdentity(id: IdentityConfig): BotIdentityConfig {
-  switch (id.type) {
-    case 'static':
-      return {
-        type: 'static',
-        botName: id.botName,
-        avatarUrl: id.avatarUrl,
-      };
-    case 'mimic':
-      return { type: 'mimic', as_member: id.as_member };
-    case 'random':
-      return { type: 'random' };
-    default:
-      // Exhaustiveness
-      return { type: 'random' } as BotIdentityConfig;
-  }
 }
 
 export function normalizeLlmConfig(llm: LlmSchemaType): LlmConfig {

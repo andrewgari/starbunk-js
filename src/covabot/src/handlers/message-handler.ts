@@ -12,7 +12,7 @@
 import { Message } from 'discord.js';
 import { logLayer } from '@starbunk/shared/observability/log-layer';
 import { DiscordService } from '@starbunk/shared/discord/discord-service';
-import { BotIdentity } from '@starbunk/shared/types/bot-identity';
+
 import { MemoryService } from '@/services/memory-service';
 import { ResponseDecisionService, DecisionContext } from '@/services/response-decision-service';
 import { LlmService } from '@/services/llm-service';
@@ -31,7 +31,7 @@ import { messageDecisionsTotal } from '@/observability/covabot-metrics';
 const logger = logLayer.withPrefix('MessageHandler');
 
 export class MessageHandler {
-  private profiles: Map<string, CovaProfile>;
+  private profile: CovaProfile | null;
   private memoryService: MemoryService;
   private decisionService: ResponseDecisionService;
   private llmService: LlmService;
@@ -39,14 +39,14 @@ export class MessageHandler {
   private socialBatteryService: SocialBatteryService;
 
   constructor(
-    profiles: Map<string, CovaProfile>,
+    profile: CovaProfile | null,
     memoryService: MemoryService,
     decisionService: ResponseDecisionService,
     llmService: LlmService,
     personalityService: PersonalityService,
     socialBatteryService: SocialBatteryService,
   ) {
-    this.profiles = profiles;
+    this.profile = profile;
     this.memoryService = memoryService;
     this.decisionService = decisionService;
     this.llmService = llmService;
@@ -72,8 +72,8 @@ export class MessageHandler {
 
     getBotActivityTracker('bot_activity').onMessageReceived();
 
-    if (this.profiles.size === 0) {
-      logger.warn('Received message but no profiles are loaded — cannot respond');
+    if (!this.profile) {
+      logger.warn('Received message but no profile is loaded — cannot respond');
       return;
     }
 
@@ -87,20 +87,17 @@ export class MessageHandler {
       })
       .debug('Processing message');
 
-    // Process message for each loaded profile
-    for (const profile of this.profiles.values()) {
-      try {
-        await this.processForProfile(profile, message, botUserId);
-      } catch (error) {
-        logger
-          .withError(error)
-          .withMetadata({
-            profile_id: profile.id,
-            message_id: message.id,
-          })
-          .error('Error processing message for profile');
-        getBotActivityTracker('bot_activity').onError('profile_processing');
-      }
+    try {
+      await this.processForProfile(this.profile, message, botUserId);
+    } catch (error) {
+      logger
+        .withError(error)
+        .withMetadata({
+          profile_id: this.profile.id,
+          message_id: message.id,
+        })
+        .error('Error processing message for profile');
+      getBotActivityTracker('bot_activity').onError('profile_processing');
     }
 
     const duration = Date.now() - startTime;
@@ -108,7 +105,7 @@ export class MessageHandler {
       .withMetadata({
         message_id: message.id,
         duration_ms: duration,
-        profiles_count: this.profiles.size,
+        profiles_count: this.profile ? 1 : 0,
       })
       .debug('Message processing complete');
   }
@@ -429,69 +426,13 @@ export class MessageHandler {
   }
 
   /**
-   * Send response via Discord webhook
+   * Send response via Discord API chat calls
    */
   private async sendResponse(
     profile: CovaProfile,
     message: Message,
     content: string,
   ): Promise<void> {
-    const discordService = DiscordService.getInstance();
-
-    // Build bot identity from profile
-    const identity: BotIdentity = await this.resolveBotIdentity(profile, message);
-
-    await discordService.sendMessageWithBotIdentity(message, identity, content);
-  }
-
-  /**
-   * Resolve bot identity based on profile configuration
-   */
-  private async resolveBotIdentity(profile: CovaProfile, message: Message): Promise<BotIdentity> {
-    const identity = profile.identity;
-
-    switch (identity.type) {
-      case 'static':
-        return {
-          botName: identity.botName || profile.displayName,
-          avatarUrl: identity.avatarUrl || profile.avatarUrl || '',
-        };
-
-      case 'mimic':
-        if (identity.as_member && message.guild) {
-          const discordService = DiscordService.getInstance();
-          return discordService.getBotIdentityFromDiscord(message.guild.id, identity.as_member);
-        }
-        // Fallback to profile defaults
-        return {
-          botName: profile.displayName,
-          avatarUrl: profile.avatarUrl || '',
-        };
-
-      case 'random':
-        // Pick random member from guild
-        if (message.guild) {
-          const members = message.guild.members.cache.filter(m => !m.user.bot).map(m => m);
-
-          if (members.length > 0) {
-            const randomMember = members[Math.floor(Math.random() * members.length)];
-            return {
-              botName: randomMember.nickname || randomMember.user.username,
-              avatarUrl: randomMember.displayAvatarURL({ size: 256, extension: 'png' }),
-            };
-          }
-        }
-        // Fallback to profile defaults
-        return {
-          botName: profile.displayName,
-          avatarUrl: profile.avatarUrl || '',
-        };
-
-      default:
-        return {
-          botName: profile.displayName,
-          avatarUrl: profile.avatarUrl || '',
-        };
-    }
+    await message.reply(content);
   }
 }

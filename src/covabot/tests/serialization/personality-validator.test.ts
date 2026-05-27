@@ -6,10 +6,7 @@ describe('personality-validator', () => {
     profile: {
       id: 'test-bot',
       display_name: 'Test Bot',
-      identity: {
-        type: 'static',
-        botName: 'Test Bot',
-      },
+
       personality: {
         system_prompt: 'You are a test bot.',
         traits: ['friendly'],
@@ -66,28 +63,6 @@ describe('personality-validator', () => {
       expect(() => validateOrThrow(invalid)).toThrow();
     });
 
-    it('should throw for missing identity', () => {
-      const invalid = {
-        profile: {
-          ...validProfile.profile,
-          identity: undefined,
-        },
-      };
-      expect(() => validateOrThrow(invalid)).toThrow();
-    });
-
-    it('should throw for invalid identity type', () => {
-      const invalid = {
-        profile: {
-          ...validProfile.profile,
-          identity: {
-            type: 'unknown',
-          },
-        },
-      };
-      expect(() => validateOrThrow(invalid)).toThrow();
-    });
-
     it('should accept missing system_prompt (populated from markdown files at load time)', () => {
       const withoutPrompt = {
         profile: {
@@ -99,29 +74,6 @@ describe('personality-validator', () => {
         },
       };
       expect(() => validateOrThrow(withoutPrompt)).not.toThrow();
-    });
-
-    it('should throw for invalid mimic identity (bad user ID format)', () => {
-      const invalid = {
-        profile: {
-          ...validProfile.profile,
-          identity: {
-            type: 'mimic',
-            as_member: 'not-a-valid-id',
-          },
-        },
-      };
-      expect(() => validateOrThrow(invalid)).toThrow();
-    });
-
-    it('should throw for invalid avatar_url (not a URL)', () => {
-      const invalid = {
-        profile: {
-          ...validProfile.profile,
-          avatar_url: 'not-a-valid-url',
-        },
-      };
-      expect(() => validateOrThrow(invalid)).toThrow();
     });
 
     it('should throw for sarcasm_level out of range', () => {
@@ -174,9 +126,7 @@ describe('personality-validator', () => {
         profile: {
           id: 'minimal',
           display_name: 'Minimal',
-          identity: {
-            type: 'random',
-          },
+
           personality: {
             system_prompt: 'Minimal prompt',
           },
@@ -194,48 +144,19 @@ describe('personality-validator', () => {
       expect(result.profile.ignore_bots).toBe(true);
     });
 
-    it('should validate mimic identity with valid Discord user ID', () => {
-      const mimicProfile = {
-        profile: {
-          ...validProfile.profile,
-          identity: {
-            type: 'mimic',
-            as_member: '123456789012345678',
-          },
-        },
-      };
-
-      const result = validateOrThrow(mimicProfile);
-      expect(result.profile.identity.type).toBe('mimic');
-    });
-
-    it('should validate random identity', () => {
-      const randomProfile = {
-        profile: {
-          ...validProfile.profile,
-          identity: {
-            type: 'random',
-          },
-        },
-      };
-
-      const result = validateOrThrow(randomProfile);
-      expect(result.profile.identity.type).toBe('random');
-    });
-
     it('should format error messages with paths', () => {
       const invalid = {
         profile: {
           id: 'test',
           display_name: 'Test',
-          identity: { type: 'static' }, // missing botName
+          social_battery: { max_messages: 'invalid' },
           personality: {
             system_prompt: 'Test',
           },
         },
       };
 
-      expect(() => validateOrThrow(invalid)).toThrow('botName');
+      expect(() => validateOrThrow(invalid)).toThrow('max_messages');
     });
 
     it('should throw for non-object input', () => {
