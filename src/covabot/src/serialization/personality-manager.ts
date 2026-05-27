@@ -29,7 +29,7 @@ export class PersonalityManager implements PersonalityService {
     if (fs.existsSync(this.dir)) {
       this.startWatching();
     } else {
-      this.logger.warn(`Personalities directory '${this.dir}' does not exist; watcher not started`);
+      this.logger.warn(`Personality directory '${this.dir}' does not exist; watcher not started`);
     }
   }
 
@@ -103,7 +103,7 @@ export class PersonalityManager implements PersonalityService {
         }, 500);
       });
     } catch (err) {
-      this.logger.withError(err as Error).warn(`Failed to watch personalities directory '${dir}'`);
+      this.logger.withError(err as Error).warn(`Failed to watch personality directory '${dir}'`);
     }
   }
 
