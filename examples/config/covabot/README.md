@@ -153,6 +153,7 @@ config/covabot/
     dislikes.md       ← optional
     opinions.md       ← optional
     beliefs.md        ← optional
+    relationships.md  ← optional: specific relationship instructions per Discord User ID
 ```
 
 1. Create a subdirectory under the personalities path (e.g. `config/covabot/my-persona/`)
