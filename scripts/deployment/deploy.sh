@@ -190,6 +190,9 @@ main() {
   echo "🏷️  Tag: ${DEPLOY_TAG}"
   echo "⏰ Completed: $(date)"
   echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+  
+  # Save the deployed version so future runs can skip if no updates
+  echo "${VERSION}" > .deployed_commit
 }
 
 # Execute deployment
