@@ -150,6 +150,16 @@ export class MessageHandler {
             reason: decision.reason,
           })
           .info('Message skipped');
+
+        // Step 1.5: Record the user message even if we skip (unless it's structural noise)
+        await this.memoryService.storeConversation(
+          profile.id,
+          message.channelId,
+          message.author.id,
+          message.author.username,
+          message.content,
+          null,
+        );
       } else if (VERBOSE_LOGGING) {
         logger
           .withMetadata({
@@ -198,6 +208,17 @@ export class MessageHandler {
           })
           .info('Message skipped (LLM chose silence)');
       }
+
+      // Step 2.5: Record the user message even if LLM ignores
+      await this.memoryService.storeConversation(
+        profile.id,
+        message.channelId,
+        message.author.id,
+        message.author.username,
+        message.content,
+        null,
+      );
+
       return;
     }
 
