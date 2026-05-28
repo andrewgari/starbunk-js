@@ -161,7 +161,14 @@ describe('MessageHandler', () => {
     await handler.handleMessage(msg);
 
     expect(msg.reply).not.toHaveBeenCalled();
-    expect(memoryService.storeConversation).not.toHaveBeenCalled();
+    expect(memoryService.storeConversation).toHaveBeenCalledWith(
+      'p1',
+      'c1',
+      'u1',
+      'Alice',
+      'ping',
+      null,
+    );
     expect(socialBatteryService.recordMessage).not.toHaveBeenCalled();
   });
 

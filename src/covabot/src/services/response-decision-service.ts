@@ -148,6 +148,9 @@ export class ResponseDecisionService {
     if (message.mentions.users.has(botUserId)) {
       return true;
     }
+    if (message.mentions.repliedUser?.id === botUserId) {
+      return true;
+    }
     const mentionPattern = new RegExp(`<@!?${botUserId}>`);
     return mentionPattern.test(message.content);
   }
