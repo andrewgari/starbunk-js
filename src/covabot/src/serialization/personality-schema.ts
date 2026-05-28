@@ -43,9 +43,9 @@ export const personalitySchema = z.object({
     .default([])
     .describe('Personal background details — mentioned rarely and only when naturally relevant'),
   user_relationships: z
-    .record(z.string())
+    .record(z.string(), z.string())
     .default({})
-    .describe('Specific relationship instructions keyed by Discord User ID'),
+    .describe('Specific relationship rules or tone to adopt per user Discord ID'),
   speech_patterns: speechPatternsSchema.default({
     lowercase: false,
     sarcasm_level: 0.3,

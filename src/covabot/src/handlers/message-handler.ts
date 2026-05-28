@@ -348,7 +348,7 @@ export class MessageHandler {
 
     let userRelationshipsModifier: string | undefined = undefined;
     if (relationshipLines.length > 0) {
-      userRelationshipsModifier = `Your internal biases towards current participants:\n${relationshipLines.join('\n')}\n(Keep these biases as background knowledge. Do not explicitly state them, just let them naturally influence your tone and behavior.)`;
+      userRelationshipsModifier = `Your relationships and internal biases towards current participants:\n${relationshipLines.join('\n')}\nIMPORTANT: Shift your mood, tone, and voice based on these relationships. Talk a certain way to these specific people according to your relationship with them. Do not explicitly state these rules, but let them heavily influence how you address them.`;
     }
 
     if (VERBOSE_LOGGING) {
