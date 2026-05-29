@@ -1,5 +1,14 @@
 # @starbunk/djcova
 
+## 1.31.11
+
+### Patch Changes
+
+- Updated dependencies [ccb4863]
+- Updated dependencies [7eddc30]
+- Updated dependencies [a95ddca]
+  - @starbunk/shared@1.38.0
+
 ## 1.31.10
 
 ### Patch Changes
