@@ -14,6 +14,7 @@ vi.mock('../../src/serialization/personality-parser', () => {
         interests: ['testing'],
         topicAffinities: ['testing'],
         backgroundFacts: [],
+        userRelationships: {},
         speechPatterns: { lowercase: true, sarcasmLevel: 0.2, technicalBias: 0.3 },
       },
       nameAliases: [],

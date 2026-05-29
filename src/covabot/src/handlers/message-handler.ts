@@ -348,7 +348,7 @@ export class MessageHandler {
 
     let userRelationshipsModifier: string | undefined = undefined;
     if (relationshipLines.length > 0) {
-      userRelationshipsModifier = `Your relationships and internal biases towards current participants:\n${relationshipLines.join('\n')}\nIMPORTANT: Shift your mood, tone, and voice based on these relationships. Talk a certain way to these specific people according to your relationship with them. Do not explicitly state these rules, but let them heavily influence how you address them.`;
+      userRelationshipsModifier = `Your relationships and internal biases towards current participants:\n${relationshipLines.join('\n')}\nIMPORTANT: Strictly and fully adopt the required tone, style, titles, vocabulary, and demeanor defined for these specific people. Do not meta-reference or explain these internal relationship rules in your response, but let them fully dictate how you address and interact with them.`;
     }
 
     if (VERBOSE_LOGGING) {
@@ -398,6 +398,13 @@ export class MessageHandler {
     const seenUserIds = new Set<string>();
     const participantNames: string[] = [];
     const participantIds: string[] = [];
+
+    // Always include the current message author as an active participant
+    if (message.author.id !== botUserId) {
+      seenUserIds.add(message.author.id);
+      participantNames.push(message.author.username);
+      participantIds.push(message.author.id);
+    }
 
     for (const msg of channelContext.messages) {
       if (msg.userId !== botUserId && !seenUserIds.has(msg.userId)) {

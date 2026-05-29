@@ -147,8 +147,9 @@ function loadMarkdownRelationships(dirPath: string): Record<string, string> {
   const content = readFileUtf8(filePath);
   const relationships: Record<string, string> = {};
 
-  // Split by headings consisting of 1-6 '#' characters followed by a Discord User ID (digits only).
-  const parts = content.split(/^(?:#{1,6})\s*(\d{17,19})\s*$/m);
+  // Split by headings consisting of 1-6 '#' characters followed by a Discord User ID (digits only),
+  // allowing optional trailing characters (like a username or description) on the same heading line.
+  const parts = content.split(/^(?:#{1,6})\s*(\d{17,21})(?:\s+.*)?$/m);
 
   for (let i = 1; i < parts.length; i += 2) {
     const id = parts[i];

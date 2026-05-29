@@ -96,7 +96,7 @@ export class LlmService {
     // Add structured engagement context signals
     messages.push({
       role: 'system',
-      content: this.buildEngagementBlock(context.engagementContext),
+      content: `${this.buildEngagementBlock(context.engagementContext)}\n\nIMPORTANT: You are currently responding to ${userName}. Strictly apply all specific relationship rules, voice instructions, and tone requirements defined for ${userName} when composing your reply.`,
     });
 
     // Add the current message
@@ -238,11 +238,6 @@ export class LlmService {
       parts.push(
         `\nBackground about you — only bring these up when the conversation genuinely leads there, never force them:\n${factLines}`,
       );
-    }
-
-    // User relationships (injected based on active participants)
-    if (context.userRelationshipsModifier) {
-      parts.push(`\n${context.userRelationshipsModifier}`);
     }
 
     // Speech style
