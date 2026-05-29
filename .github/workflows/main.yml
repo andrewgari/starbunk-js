@@ -42,6 +42,14 @@ jobs:
               - 'src/bluebot/**'
             shared:
               - 'src/shared/**'
+            global:
+              - 'package.json'
+              - 'package-lock.json'
+              - 'tsconfig*.json'
+              - '.github/workflows/**'
+              - 'src/e2e/**'
+              - 'scripts/**'
+              - '.changeset/**'
 
       - name: Build app matrix
         id: matrix
@@ -53,6 +61,7 @@ jobs:
           fi
 
           SHARED="${{ steps.filter.outputs.shared }}"
+          GLOBAL="${{ steps.filter.outputs.global }}"
           APPS=()
           # Shared changes alone do NOT force app image rebuilds.
           # Apps only rebuild when their own source changes (or they explicitly
@@ -62,9 +71,12 @@ jobs:
           [[ "${{ steps.filter.outputs.covabot }}" == "true" ]] && APPS+=("covabot")
           [[ "${{ steps.filter.outputs.bluebot }}" == "true" ]] && APPS+=("bluebot")
 
-          if [ ${#APPS[@]} -eq 0 ] && [ "$SHARED" != "true" ]; then
-            # No app-level or shared changes (CI/root files only) — rebuild all as safety net
+          if [ "$GLOBAL" == "true" ]; then
+            # Global dependency or config changed - rebuild all
             echo 'apps=["bunkbot","djcova","covabot","bluebot"]' >> $GITHUB_OUTPUT
+          elif [ ${#APPS[@]} -eq 0 ] && [ "$SHARED" != "true" ]; then
+            # No relevant changes at all (e.g. only .md files)
+            echo 'apps=[]' >> $GITHUB_OUTPUT
           else
             APPS_JSON=$(printf '%s\n' "${APPS[@]}" | jq -R . | jq -sc .)
             echo "apps=$APPS_JSON" >> $GITHUB_OUTPUT
