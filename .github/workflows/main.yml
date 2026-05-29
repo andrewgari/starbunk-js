@@ -448,6 +448,7 @@ jobs:
             echo "bumped=false" >> $GITHUB_OUTPUT
           else
             git commit -m "chore(release): version packages [skip ci]"
+            git pull --rebase origin main
             git push
             echo "bumped=true" >> $GITHUB_OUTPUT
           fi
