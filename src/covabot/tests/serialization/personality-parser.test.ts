@@ -207,5 +207,30 @@ profile:
 
       expect(profile.memory.channelWindow).toBe(20);
     });
+
+    it('should parse user relationships from relationships.md even with usernames/labels in headings', () => {
+      const yaml = `
+profile:
+  id: "relationship-bot"
+  display_name: "Relationship Bot"
+  personality:
+    system_prompt: "Test"
+`;
+      const dir = mkPersonalityDir('relationship-bot', yaml, {
+        'relationships.md': `
+## 123456789012345678 - andrewgari
+You speak like a Knight to their King.
+
+## 876543210987654321 (Alice)
+You are extremely friendly to her.
+`,
+      });
+      const profile = loadPersonalityFromDirectory(dir);
+
+      expect(profile.personality.userRelationships).toEqual({
+        '123456789012345678': 'You speak like a Knight to their King.',
+        '876543210987654321': 'You are extremely friendly to her.',
+      });
+    });
   });
 });

@@ -91,6 +91,7 @@ describe('MessageHandler', () => {
         interests: [],
         topicAffinities: [],
         backgroundFacts: [],
+        userRelationships: {},
         speechPatterns: { lowercase: true, sarcasmLevel: 0.1, technicalBias: 0.1 },
       },
       nameAliases: [],
@@ -186,5 +187,50 @@ describe('MessageHandler', () => {
     const msg = createMessage({ content: 'hello' });
     await handler.handleMessage(msg);
     expect(decisionService.shouldRespond).not.toHaveBeenCalled();
+  });
+
+  it('always includes the message author as an active participant and loads their relationship', async () => {
+    decisionService.shouldRespond.mockResolvedValue({
+      shouldRespond: true,
+      reason: 'llm_response',
+    });
+    llmService.generateResponse.mockResolvedValue({
+      content: 'hello',
+      shouldIgnore: false,
+      tokensUsed: 1,
+      model: 'm',
+      provider: 'p',
+    });
+
+    profile.personality.userRelationships = {
+      'user-author-123': 'You are extremely loyal to this user like a Knight to their King.',
+    };
+
+    const handler = new MessageHandler(
+      profile,
+      memoryService,
+      decisionService,
+      llmService,
+      personalityService,
+      socialBatteryService,
+    );
+
+    const msg = createMessage({
+      authorId: 'user-author-123',
+      authorUsername: 'KingAndrew',
+      content: 'Hello, bot.',
+    });
+    await handler.handleMessage(msg);
+
+    // Verify the arguments passed to generateResponse
+    expect(llmService.generateResponse).toHaveBeenCalled();
+    const [passedProfile, passedContext, passedContent, passedUsername] =
+      llmService.generateResponse.mock.calls.at(-1)!;
+
+    expect(passedContext.engagementContext.activeParticipantIds).toContain('user-author-123');
+    expect(passedContext.engagementContext.activeParticipants).toContain('KingAndrew');
+    expect(passedContext.userRelationshipsModifier).toContain(
+      'You are extremely loyal to this user like a Knight to their King.',
+    );
   });
 });
