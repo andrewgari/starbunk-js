@@ -147,15 +147,33 @@ function loadMarkdownRelationships(dirPath: string): Record<string, string> {
   const content = readFileUtf8(filePath);
   const relationships: Record<string, string> = {};
 
-  // Split by headings consisting of 1-6 '#' characters followed by a Discord User ID (digits only),
-  // allowing optional trailing characters (like a username or description) on the same heading line.
-  const parts = content.split(/^(?:#{1,6})\s*(\d{17,21})(?:\s+.*)?$/m);
+  // Split content by headings (1-6 '#' characters at the start of a line)
+  const blocks = content.split(/^(?:#{1,6})\s+/m);
 
-  for (let i = 1; i < parts.length; i += 2) {
-    const id = parts[i];
-    const relContent = parts[i + 1]?.trim();
-    if (id && relContent) {
-      relationships[id] = relContent;
+  // The first block is content before the first heading, so we skip it.
+  for (let i = 1; i < blocks.length; i++) {
+    const block = blocks[i];
+    const lines = block.split(/\r?\n/);
+    const heading = lines[0]?.trim() || '';
+    const body = lines.slice(1).join('\n').trim();
+
+    if (!heading) continue;
+
+    // 1. Try to find the Discord ID (17-21 digits) in the heading first
+    const headingIdMatch = heading.match(/\b(\d{17,21})\b/);
+    let userId: string | null = headingIdMatch ? headingIdMatch[1] : null;
+
+    // 2. If not in heading, look for User ID in the body
+    if (!userId) {
+      const bodyIdMatch =
+        body.match(/(?:user[-_\s]*id|id)[:*`\s-]*(\d{17,21})/i) || body.match(/\b(\d{17,21})\b/);
+      if (bodyIdMatch) {
+        userId = bodyIdMatch[1];
+      }
+    }
+
+    if (userId) {
+      relationships[userId] = body;
     }
   }
 
