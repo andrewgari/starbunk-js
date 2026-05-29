@@ -96,7 +96,7 @@ export class LlmService {
     // Add structured engagement context signals
     messages.push({
       role: 'system',
-      content: `${this.buildEngagementBlock(context.engagementContext)}\n\nIMPORTANT: You are currently responding to ${userName}. Strictly apply all specific relationship rules, voice instructions, and tone requirements defined for ${userName} when composing your reply.`,
+      content: `${this.buildEngagementBlock(context.engagementContext)}\n\nIMPORTANT: You are currently responding to ${userName}. Maintain your core personality and voice while applying any specific relationship rules or tone requirements defined for this user.`,
     });
 
     // Add the current message

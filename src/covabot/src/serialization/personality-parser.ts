@@ -86,6 +86,7 @@ export function parsePersonalityFile(filePath: string): CovaProfile {
  */
 const PERSONALITY_SECTIONS: Array<{ file: string; heading: string }> = [
   { file: 'core.md', heading: '' },
+  { file: 'voice.md', heading: '## Voice Direction' },
   { file: 'speech.md', heading: '## Speech Style' },
   { file: 'likes.md', heading: '## Things I Like' },
   { file: 'dislikes.md', heading: '## Things I Dislike' },
