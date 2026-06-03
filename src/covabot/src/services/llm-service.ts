@@ -5,8 +5,8 @@
  * prompt from a CovaProfile, injects conversation context, formats engagement
  * signals, and delegates the actual HTTP/API call to LlmProviderManager.
  *
- * Provider selection (Ollama primary → OpenAI fallback) is handled entirely
- * by LlmProviderManager; this service never calls a provider directly.
+ * Provider selection and execution is handled entirely by LlmProviderManager,
+ * based on the single LLM provider configured by the user.
  */
 
 import { logLayer } from '@starbunk/shared/observability/log-layer';

@@ -11,6 +11,7 @@ import { setApplicationHealth } from '@starbunk/shared/observability/health-serv
 import { DiscordService } from '@starbunk/shared/discord/discord-service';
 import { notifyStartupIfNewVersion } from '@starbunk/shared/discord/startup-dm';
 import { PostgresService } from '@starbunk/shared/database';
+import { LlmProviderType } from '@starbunk/shared';
 import { initializeDatabase } from '@/database';
 import { MemoryService } from '@/services/memory-service';
 import { InterestService } from '@/services/interest-service';
@@ -38,23 +39,12 @@ export interface CovaBotConfig {
   discordToken: string;
   personalitiesPath?: string;
   databasePath?: string;
-  // Ollama (local, no API key)
-  ollamaBaseUrl?: string;
-  ollamaDefaultModel?: string;
-  // Anthropic / Claude
-  anthropicApiKey?: string;
-  anthropicDefaultModel?: string;
-  // Google Gemini
-  geminiApiKey?: string;
-  geminiDefaultModel?: string;
-  // OpenAI
-  openaiApiKey?: string;
-  openaiDefaultModel?: string;
-  // Legacy aliases
-  localLlmApiKey?: string;
-  localLlmDefaultModel?: string;
-  cloudLlmApiKey?: string;
-  cloudLlmDefaultModel?: string;
+
+  // Primary LLM Provider
+  llmProvider: string;
+  llmUrl?: string;
+  llmApiKey?: string;
+  llmDefaultModel?: string;
 }
 
 export class CovaBot {
@@ -243,29 +233,24 @@ export class CovaBot {
     this.interestService = new InterestService(interestRepo);
     this.socialBatteryService = new SocialBatteryService(socialBatteryRepo);
     this.llmService = new LlmService({
-      ollamaBaseUrl: this.config.ollamaBaseUrl,
-      ollamaDefaultModel: this.config.ollamaDefaultModel,
-      anthropicApiKey: this.config.anthropicApiKey,
-      anthropicDefaultModel: this.config.anthropicDefaultModel,
-      geminiApiKey: this.config.geminiApiKey,
-      geminiDefaultModel: this.config.geminiDefaultModel,
-      openaiApiKey: this.config.openaiApiKey,
-      openaiDefaultModel: this.config.openaiDefaultModel,
-      localLlmApiKey: this.config.localLlmApiKey,
-      localLlmDefaultModel: this.config.localLlmDefaultModel,
-      cloudLlmApiKey: this.config.cloudLlmApiKey,
-      cloudLlmDefaultModel: this.config.cloudLlmDefaultModel,
+      provider: this.config.llmProvider as LlmProviderType, // Cast string config to LlmProviderType
+      url: this.config.llmUrl,
+      apiKey: this.config.llmApiKey,
+      defaultModel: this.config.llmDefaultModel,
     });
     this.personalityService = new PersonalityService(personalityRepo);
 
+    // Note: EmbeddingManager might need a refactor later, but for now we'll pass the single key
+    // down to local/cloud depending on what we have. It expects localLlmApiKey/cloudLlmApiKey.
     this.embeddingManager = new EmbeddingManager({
-      localLlmApiKey: this.config.localLlmApiKey,
+      localLlmApiKey: this.config.llmApiKey,
+      cloudLlmApiKey: this.config.llmApiKey,
+      // Leaving env variables for embedding models since they are often different
       localLlmEmbeddingModel: process.env.LOCAL_LLM_EMBEDDING_MODEL,
-      cloudLlmApiKey: this.config.cloudLlmApiKey,
       cloudLlmEmbeddingModel: process.env.CLOUD_LLM_EMBEDDING_MODEL,
     });
 
-    const chatModel = this.config.localLlmDefaultModel || process.env.LOCAL_LLM_DEFAULT_MODEL;
+    const chatModel = this.config.llmDefaultModel || process.env.LLM_DEFAULT_MODEL;
     const additionalModels = chatModel ? [chatModel] : [];
     this.embeddingManager.startScheduledUpdates(additionalModels);
 

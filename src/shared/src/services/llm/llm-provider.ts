@@ -37,6 +37,8 @@ export interface LlmCompletionResult {
   finishReason?: string;
 }
 
+export type LlmProviderType = 'gemini' | 'ollama' | 'anthropic' | 'openai';
+
 /**
  * Abstract LLM Provider interface
  */
@@ -66,21 +68,8 @@ export interface LlmProvider {
  * Fields are optional — providers whose key/URL is absent will be skipped.
  */
 export interface LlmProviderConfig {
-  // Ollama (local, no API key required)
-  ollamaBaseUrl?: string;
-  ollamaDefaultModel?: string;
-  // Anthropic / Claude
-  anthropicApiKey?: string;
-  anthropicDefaultModel?: string;
-  // Google Gemini
-  geminiApiKey?: string;
-  geminiDefaultModel?: string;
-  // OpenAI
-  openaiApiKey?: string;
-  openaiDefaultModel?: string;
-  // Legacy aliases kept for backward compatibility
-  localLlmApiKey?: string;
-  localLlmDefaultModel?: string;
-  cloudLlmApiKey?: string;
-  cloudLlmDefaultModel?: string;
+  provider: LlmProviderType;
+  url?: string;
+  apiKey?: string;
+  defaultModel?: string;
 }

@@ -45,27 +45,35 @@ async function main(): Promise<void> {
     process.exit(1);
   }
 
-  // Check if at least one LLM provider is configured
-  const ollamaBaseUrl = process.env.OLLAMA_BASE_URL;
-  const anthropicApiKey = process.env.ANTHROPIC_API_KEY;
-  const geminiApiKey = process.env.GEMINI_API_KEY;
-  const openaiApiKey = process.env.OPENAI_API_KEY;
-  // Legacy aliases
-  const localLlmApiKey = process.env.LOCAL_LLM_API_KEY;
-  const cloudLlmApiKey = process.env.CLOUD_LLM_API_KEY;
+  // Read singular LLM provider config
+  let llmProvider = process.env.LLM_PROVIDER;
+  let llmUrl = process.env.LLM_URL;
+  let llmApiKey = process.env.LLM_API_KEY;
+  let llmDefaultModel = process.env.LLM_DEFAULT_MODEL;
 
-  const hasLlmProvider =
-    ollamaBaseUrl ||
-    anthropicApiKey ||
-    geminiApiKey ||
-    openaiApiKey ||
-    localLlmApiKey ||
-    cloudLlmApiKey;
+  // Fallback logic for backward compatibility if LLM_PROVIDER is not set
+  if (!llmProvider) {
+    if (process.env.GEMINI_API_KEY) {
+      llmProvider = 'gemini';
+      llmApiKey = process.env.GEMINI_API_KEY;
+      llmDefaultModel = process.env.GEMINI_DEFAULT_MODEL;
+    } else if (process.env.OLLAMA_BASE_URL || process.env.LOCAL_LLM_API_KEY) {
+      llmProvider = 'ollama';
+      llmUrl = process.env.OLLAMA_BASE_URL || process.env.LOCAL_LLM_API_KEY;
+      llmDefaultModel = process.env.OLLAMA_DEFAULT_MODEL || process.env.LOCAL_LLM_DEFAULT_MODEL;
+    } else if (process.env.ANTHROPIC_API_KEY) {
+      llmProvider = 'anthropic';
+      llmApiKey = process.env.ANTHROPIC_API_KEY;
+      llmDefaultModel = process.env.ANTHROPIC_DEFAULT_MODEL;
+    } else if (process.env.OPENAI_API_KEY || process.env.CLOUD_LLM_API_KEY) {
+      llmProvider = 'openai';
+      llmApiKey = process.env.OPENAI_API_KEY || process.env.CLOUD_LLM_API_KEY;
+      llmDefaultModel = process.env.OPENAI_DEFAULT_MODEL || process.env.CLOUD_LLM_DEFAULT_MODEL;
+    }
+  }
 
-  if (!hasLlmProvider) {
-    logger.warn(
-      'No LLM provider configured. Set one of: OLLAMA_BASE_URL, ANTHROPIC_API_KEY, GEMINI_API_KEY, OPENAI_API_KEY',
-    );
+  if (!llmProvider) {
+    logger.warn('No LLM provider configured. Set LLM_PROVIDER and LLM_API_KEY (or LLM_URL).');
     process.exit(1);
   }
 
@@ -74,23 +82,10 @@ async function main(): Promise<void> {
     discordToken,
     personalitiesPath: process.env.COVABOT_PERSONALITIES_PATH,
     databasePath: process.env.COVABOT_DATABASE_PATH,
-    // Ollama
-    ollamaBaseUrl,
-    ollamaDefaultModel: process.env.OLLAMA_DEFAULT_MODEL,
-    // Anthropic
-    anthropicApiKey,
-    anthropicDefaultModel: process.env.ANTHROPIC_DEFAULT_MODEL,
-    // Gemini
-    geminiApiKey,
-    geminiDefaultModel: process.env.GEMINI_DEFAULT_MODEL,
-    // OpenAI
-    openaiApiKey,
-    openaiDefaultModel: process.env.OPENAI_DEFAULT_MODEL,
-    // Legacy
-    localLlmApiKey,
-    localLlmDefaultModel: process.env.LOCAL_LLM_DEFAULT_MODEL,
-    cloudLlmApiKey,
-    cloudLlmDefaultModel: process.env.CLOUD_LLM_DEFAULT_MODEL,
+    llmProvider,
+    llmUrl,
+    llmApiKey,
+    llmDefaultModel,
   };
 
   // Initialize MetricsService with the correct service name BEFORE anything calls

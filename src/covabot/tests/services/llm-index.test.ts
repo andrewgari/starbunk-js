@@ -9,5 +9,6 @@ describe('LLM index re-exports', () => {
     expect(LlmModule).toHaveProperty('LlmProviderManager');
     expect(LlmModule).toHaveProperty('OpenAIProvider');
     expect(LlmModule).toHaveProperty('OllamaProvider');
+    expect(LlmModule).toHaveProperty('GenericLlmProvider');
   });
 });

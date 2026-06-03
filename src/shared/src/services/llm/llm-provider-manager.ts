@@ -1,19 +1,8 @@
 /**
- * LLM Provider Manager — multi-provider orchestrator with automatic fallback.
+ * LLM Provider Manager — singular provider orchestrator.
  *
- * Maintains an ordered list of LlmProvider implementations. On each completion
- * request, it tries providers in priority order and returns the first success.
- * If a provider fails, the error is logged and the next provider is tried.
- * If all providers fail, the last error is re-thrown.
- *
- * Default priority (set at construction time):
- *   1. GeminiProvider    — Google Gemini models (primary)
- *   2. OllamaProvider    — local, free, private
- *   3. AnthropicProvider — Claude models
- *   4. OpenAIProvider    — OpenAI / legacy CLOUD_LLM_API_KEY (final fallback)
- *
- * Only providers whose isAvailable() returns true at construction time are
- * registered, so unconfigured providers are silently skipped.
+ * Wraps a single configured LlmProvider implementation.
+ * All completions use this provider; no fallback is attempted.
  */
 
 import { logLayer } from '../../observability/log-layer';
@@ -24,126 +13,84 @@ import {
   LlmCompletionOptions,
   LlmCompletionResult,
 } from './llm-provider';
-import { OllamaProvider } from './ollama-provider';
-import { AnthropicProvider } from './anthropic-provider';
-import { GeminiProvider } from './gemini-provider';
-import { OpenAIProvider } from './openai-provider';
+import { GenericLlmProvider } from './generic-provider';
 
 const logger = logLayer.withPrefix('LlmProviderManager');
 
 export class LlmProviderManager {
-  private providers: LlmProvider[] = [];
+  private provider: LlmProvider | null = null;
 
   constructor(config?: LlmProviderConfig) {
-    this.initializeProviders(config);
+    this.initializeProvider(config);
   }
 
   /**
-   * Initialize providers in priority order
+   * Initialize the single configured provider
    */
-  private initializeProviders(config?: LlmProviderConfig): void {
-    // 1. Google Gemini (primary — capable models, generous default token limits)
-    // Trade-off: cloud API call (requires GEMINI_API_KEY, not private). Ollama was previously
-    // primary because it is local and free; Gemini is now preferred for its higher token ceiling
-    // which reduces truncation. Users without a Gemini key fall back to Ollama automatically.
-    const gemini = new GeminiProvider(config?.geminiApiKey, config?.geminiDefaultModel);
-    if (gemini.isAvailable()) {
-      this.providers.push(gemini);
-      logger.info('Gemini provider registered');
+  private initializeProvider(config?: LlmProviderConfig): void {
+    if (!config || !config.provider) {
+      logger.warn('No LLM provider configured! LLM features will not work.');
+      return;
     }
 
-    // 2. Ollama (local, free, private)
-    const ollama = new OllamaProvider(
-      config?.ollamaBaseUrl || config?.localLlmApiKey,
-      config?.ollamaDefaultModel || config?.localLlmDefaultModel,
+    const provider = new GenericLlmProvider(
+      config.provider,
+      config.apiKey || config.url,
+      config.defaultModel,
     );
-    if (ollama.isAvailable()) {
-      this.providers.push(ollama);
-      logger.info('Ollama provider registered');
-    }
 
-    // 3. Anthropic / Claude
-    const anthropic = new AnthropicProvider(config?.anthropicApiKey, config?.anthropicDefaultModel);
-    if (anthropic.isAvailable()) {
-      this.providers.push(anthropic);
-      logger.info('Anthropic provider registered');
-    }
-
-    // 4. OpenAI (legacy fallback via OPENAI_API_KEY or CLOUD_LLM_API_KEY)
-    const openai = new OpenAIProvider(
-      config?.openaiApiKey || config?.cloudLlmApiKey,
-      config?.openaiDefaultModel || config?.cloudLlmDefaultModel,
-    );
-    if (openai.isAvailable()) {
-      this.providers.push(openai);
-      logger.info('OpenAI provider registered');
-    }
-
-    if (this.providers.length === 0) {
-      logger.warn('No LLM providers configured! LLM features will not work.');
+    if (provider.isAvailable()) {
+      this.provider = provider;
+      logger.info(`${config.provider} provider registered`);
     } else {
-      logger
-        .withMetadata({
-          providers: this.providers.map(p => p.name),
-          primary: this.providers[0]?.name,
-        })
-        .info('LLM providers initialized');
+      logger.warn(`Configured provider ${config.provider} is not available (missing url/apiKey).`);
     }
   }
 
   /**
-   * Get the primary provider (first available)
+   * Get the primary provider
    */
   getPrimaryProvider(): LlmProvider | undefined {
-    return this.providers[0];
+    return this.provider || undefined;
   }
 
   /**
-   * Get all available providers
+   * Get all available providers (returns an array of 1 or 0 for backward compatibility)
    */
   getProviders(): LlmProvider[] {
-    return [...this.providers];
+    return this.provider ? [this.provider] : [];
   }
 
   /**
-   * Generate completion with automatic fallback
+   * Generate completion
    */
   async generateCompletion(
     messages: LlmMessage[],
     options: LlmCompletionOptions,
   ): Promise<LlmCompletionResult> {
-    if (this.providers.length === 0) {
-      throw new Error('No LLM providers available');
+    if (!this.provider) {
+      throw new Error('No LLM provider available');
     }
 
-    let lastError: Error | null = null;
-
-    for (const [index, provider] of this.providers.entries()) {
-      try {
-        logger.withMetadata({ provider: provider.name }).debug('Attempting LLM completion');
-        // For fallback providers (not the primary), strip the requested model so
-        // each provider uses its own default rather than a model name it won't recognise.
-        const effectiveOptions = index === 0 ? options : { ...options, model: undefined };
-        const result = await provider.generateCompletion(messages, effectiveOptions);
-        return result;
-      } catch (error) {
-        lastError = error instanceof Error ? error : new Error(String(error));
-        logger
-          .withError(lastError)
-          .withMetadata({
-            provider: provider.name,
-          })
-          .warn('Provider failed, trying next');
-      }
+    try {
+      logger.withMetadata({ provider: this.provider.name }).debug('Attempting LLM completion');
+      return await this.provider.generateCompletion(messages, options);
+    } catch (error) {
+      const lastError = error instanceof Error ? error : new Error(String(error));
+      logger
+        .withError(lastError)
+        .withMetadata({
+          provider: this.provider.name,
+        })
+        .error('Provider failed');
+      throw lastError;
     }
-
-    throw lastError || new Error('All LLM providers failed');
   }
 
   /**
-   * Check if any provider is available
+   * Check if the provider is available
    */
   hasAvailableProvider(): boolean {
-    return this.providers.length > 0;
+    return this.provider !== null;
   }
 }

@@ -64,10 +64,10 @@ export type {
   LlmCompletionResult,
   LlmProvider,
   LlmProviderConfig,
+  LlmProviderType,
 } from './services/llm';
 export { LlmProviderManager } from './services/llm/llm-provider-manager';
-export { OpenAIProvider } from './services/llm/openai-provider';
-export { OllamaProvider } from './services/llm/ollama-provider';
+export { OpenAIProvider, OllamaProvider, GenericLlmProvider } from './services/llm';
 
 // Ollama model management
 export { OllamaModelManager } from './services/llm/ollama-model-manager';

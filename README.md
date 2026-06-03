@@ -172,8 +172,10 @@ STARBUNK_TOKEN=your_discord_bot_token
 DATABASE_URL=postgresql://user:pass@postgres:5432/starbunk
 
 # LLM-dependent containers (CovaBot)
-CLOUD_LLM_API_KEY=your_cloud_llm_key
-LOCAL_LLM_API_KEY=http://ollama:11434
+LLM_PROVIDER=gemini                     # one of: gemini, ollama, anthropic, openai
+LLM_API_KEY=your_llm_api_key            # Required for gemini, anthropic, openai
+LLM_URL=http://ollama:11434             # Required for ollama (base URL)
+LLM_DEFAULT_MODEL=gemini-1.5-flash      # Optional: override default model
 
 # Development
 DEBUG=true
