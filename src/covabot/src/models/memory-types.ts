@@ -31,14 +31,14 @@ export interface ConversationRow {
 }
 
 export interface UserFactRow {
-  id: number;
+  id: string; // UUID
   profile_id: string;
   user_id: string;
   fact_type: 'interest' | 'relationship' | 'preference';
   fact_key: string;
   fact_value: string;
   confidence: number;
-  learned_at: string;
+  learned_at: Date;
 }
 
 export interface PersonalityEvolutionRow {
