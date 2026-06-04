@@ -3,7 +3,7 @@ import * as yaml from 'js-yaml';
 import { logLayer } from '@starbunk/shared/observability/log-layer';
 import type { CovaProfile } from '@/models/memory-types';
 import { VERBOSE_LOGGING } from '@/utils/verbose-mode';
-import { fileExists, readFileUtf8 } from './file-reader';
+import { fileExists, readFileUtf8, directoryExists, readDirectory } from './file-reader';
 import { validateOrThrow } from './personality-validator';
 import { mapToCovaProfile } from './personality-mapper';
 import { deepFreeze } from './deep-freeze';
@@ -186,6 +186,36 @@ function loadMarkdownRelationships(dirPath: string): Record<string, string> {
   return relationships;
 }
 
+function loadMarkdownVoices(dirPath: string): Record<string, string> {
+  const voicesDir = path.join(dirPath, 'voices');
+  if (!directoryExists(voicesDir)) {
+    return {};
+  }
+
+  const voices: Record<string, string> = {};
+  const entries = readDirectory(voicesDir);
+
+  for (const entry of entries) {
+    const entryPath = path.join(voicesDir, entry);
+    if (fileExists(entryPath) && path.extname(entry).toLowerCase() === '.md') {
+      const voiceKey = path.basename(entry, '.md').toLowerCase();
+      voices[voiceKey] = readFileUtf8(entryPath).trim();
+    }
+  }
+
+  if (VERBOSE_LOGGING && Object.keys(voices).length > 0) {
+    logger
+      .withMetadata({
+        dir: path.basename(dirPath),
+        count: Object.keys(voices).length,
+        voiceKeys: Object.keys(voices),
+      })
+      .info('Markdown voices loaded');
+  }
+
+  return voices;
+}
+
 /**
  * Load a single personality from a directory containing profile.yml and optional markdown files.
  * Markdown files take precedence over the system_prompt field in profile.yml.
@@ -196,16 +226,11 @@ export function loadPersonalityFromDirectory(dirPath: string): CovaProfile {
 
   const markdownPrompt = loadMarkdownSystemPrompt(dirPath);
   const markdownRelationships = loadMarkdownRelationships(dirPath);
+  const markdownVoices = loadMarkdownVoices(dirPath);
 
   const hasMarkdownPrompt = markdownPrompt.length > 0;
-  const hasMarkdownRelationships = Object.keys(markdownRelationships).length > 0;
 
-  if (!hasMarkdownPrompt && !hasMarkdownRelationships) {
-    return baseProfile;
-  }
-
-  // Overlay the markdown-assembled pieces onto the frozen base profile
-  return deepFreeze({
+  const mergedProfile = {
     ...baseProfile,
     personality: {
       ...baseProfile.personality,
@@ -214,8 +239,25 @@ export function loadPersonalityFromDirectory(dirPath: string): CovaProfile {
         ...baseProfile.personality.userRelationships,
         ...markdownRelationships,
       },
+      voices: {
+        ...baseProfile.personality.voices,
+        ...markdownVoices,
+      },
     },
-  }) as unknown as CovaProfile;
+  };
+
+  // Perform startup validation/warnings on missing mapped voice strategies
+  for (const [userId, voiceKey] of Object.entries(mergedProfile.personality.userVoices)) {
+    if (!mergedProfile.personality.voices[voiceKey.toLowerCase()]) {
+      logger
+        .withMetadata({ userId, voiceKey })
+        .warn(
+          `User voice mapping references voice key "${voiceKey}" which was not found in voices/ directory`,
+        );
+    }
+  }
+
+  return deepFreeze(mergedProfile) as unknown as CovaProfile;
 }
 
 export function getDefaultPersonalityPath(): string {

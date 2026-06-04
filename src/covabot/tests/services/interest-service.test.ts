@@ -18,6 +18,8 @@ describe('InterestService', () => {
       topicAffinities: ['typescript', 'react', 'tech:discord', 'tech:bots'],
       backgroundFacts: [],
       userRelationships: {},
+      userVoices: {},
+      voices: {},
       speechPatterns: { lowercase: false, sarcasmLevel: 0.3, technicalBias: 0.5 },
     },
     nameAliases: [],
