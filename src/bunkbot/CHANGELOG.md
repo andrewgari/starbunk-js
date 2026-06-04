@@ -1,5 +1,15 @@
 # @starbunk/bunkbot
 
+## 1.31.12
+
+### Patch Changes
+
+- 0039ccd: Exclude URLs from reply-bot trigger evaluation
+- Updated dependencies [ccb4863]
+- Updated dependencies [7eddc30]
+- Updated dependencies [a95ddca]
+  - @starbunk/shared@1.39.0
+
 ## 1.31.11
 
 ### Patch Changes
