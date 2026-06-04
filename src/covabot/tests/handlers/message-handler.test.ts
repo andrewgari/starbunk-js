@@ -92,6 +92,8 @@ describe('MessageHandler', () => {
         topicAffinities: [],
         backgroundFacts: [],
         userRelationships: {},
+        userVoices: {},
+        voices: {},
         speechPatterns: { lowercase: true, sarcasmLevel: 0.1, technicalBias: 0.1 },
       },
       nameAliases: [],
@@ -232,5 +234,59 @@ describe('MessageHandler', () => {
     expect(passedContext.userRelationshipsModifier).toContain(
       'You are extremely loyal to this user like a Knight to their King.',
     );
+  });
+
+  it('includes the userVoiceModifier when the message author has a voice instruction, and is undefined otherwise', async () => {
+    decisionService.shouldRespond.mockResolvedValue({
+      shouldRespond: true,
+      reason: 'llm_response',
+    });
+    llmService.generateResponse.mockResolvedValue({
+      content: 'hello',
+      shouldIgnore: false,
+      tokensUsed: 1,
+      model: 'm',
+      provider: 'p',
+    });
+
+    profile.personality.userVoices = {
+      'user-sarcastic-123': 'sarcastic',
+    };
+    profile.personality.voices = {
+      sarcastic: 'You speak extremely sarcastically to this person.',
+    };
+
+    const handler = new MessageHandler(
+      profile,
+      memoryService,
+      decisionService,
+      llmService,
+      personalityService,
+      socialBatteryService,
+    );
+
+    // Case 1: Message author has a voice instruction
+    const msgWithVoice = createMessage({
+      authorId: 'user-sarcastic-123',
+      authorUsername: 'SarcasticBob',
+      content: 'Hello, bot.',
+    });
+    await handler.handleMessage(msgWithVoice);
+
+    const [, passedContext1] = llmService.generateResponse.mock.calls.at(-1)!;
+    expect(passedContext1.userVoiceModifier).toContain(
+      'You speak extremely sarcastically to this person.',
+    );
+
+    // Case 2: Message author does NOT have a voice instruction
+    const msgWithoutVoice = createMessage({
+      authorId: 'user-normal-123',
+      authorUsername: 'NormalBob',
+      content: 'Hello, bot.',
+    });
+    await handler.handleMessage(msgWithoutVoice);
+
+    const [, passedContext2] = llmService.generateResponse.mock.calls.at(-1)!;
+    expect(passedContext2.userVoiceModifier).toBeUndefined();
   });
 });

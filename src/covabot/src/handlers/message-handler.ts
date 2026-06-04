@@ -351,6 +351,21 @@ export class MessageHandler {
       userRelationshipsModifier = `Your relationships and internal biases towards current participants:\n${relationshipLines.join('\n')}\nIMPORTANT: Strictly and fully adopt the required tone, style, titles, vocabulary, and demeanor defined for these specific people. Do not meta-reference or explain these internal relationship rules in your response, but let them fully dictate how you address and interact with them.`;
     }
 
+    // Build user voice modifier if responding directly to a user with a defined voice instruction
+    let userVoiceModifier: string | undefined = undefined;
+    const directUserId = message.author.id;
+    const voiceKey = profile.personality.userVoices?.[directUserId];
+    if (voiceKey) {
+      const voiceInstruction = profile.personality.voices?.[voiceKey.toLowerCase()];
+      if (voiceInstruction) {
+        userVoiceModifier = `Voice and Speech Style for addressing ${message.author.username}:\n${voiceInstruction}\nIMPORTANT: You must speak to ${message.author.username} using this voice and speech style. Strictly apply all guidelines, demeanor shifts, and vocabulary preferences specified above.`;
+      } else {
+        logger
+          .withMetadata({ userId: directUserId, voiceKey })
+          .warn('Mapped voice key not found in loaded voices');
+      }
+    }
+
     if (VERBOSE_LOGGING) {
       logger
         .withMetadata({
@@ -360,6 +375,7 @@ export class MessageHandler {
           user_facts_length: userFactsStr.length,
           has_trait_modifiers: !!traitModifiers,
           has_relationship_modifiers: !!userRelationshipsModifier,
+          has_voice_modifiers: !!userVoiceModifier,
           was_mentioned: engagementContext.wasMentioned,
           name_referenced: engagementContext.nameReferenced,
           is_direct_exchange: engagementContext.isDirectExchange,
@@ -381,6 +397,7 @@ export class MessageHandler {
       traitModifiers,
       engagementContext,
       userRelationshipsModifier,
+      userVoiceModifier,
     };
   }
 

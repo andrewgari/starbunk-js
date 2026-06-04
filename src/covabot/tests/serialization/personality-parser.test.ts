@@ -153,7 +153,12 @@ profile:
       fs.writeFileSync(path.join(dir, 'profile.yml'), yaml);
       if (markdownFiles) {
         for (const [file, content] of Object.entries(markdownFiles)) {
-          fs.writeFileSync(path.join(dir, file), content);
+          const filePath = path.join(dir, file);
+          const parentDir = path.dirname(filePath);
+          if (!fs.existsSync(parentDir)) {
+            fs.mkdirSync(parentDir, { recursive: true });
+          }
+          fs.writeFileSync(filePath, content);
         }
       }
       return dir;
@@ -230,6 +235,34 @@ You are extremely friendly to her.
       expect(profile.personality.userRelationships).toEqual({
         '123456789012345678': 'You speak like a Knight to their King.',
         '876543210987654321': 'You are extremely friendly to her.',
+      });
+    });
+
+    it('should parse user voices from directory and profile.yml', () => {
+      const yaml = `
+profile:
+  id: "voices-bot"
+  display_name: "Voices Bot"
+  personality:
+    system_prompt: "Test"
+    user_voices:
+      "111111111111111111": "chef"
+      "222222222222222222": "knight"
+`;
+      const dir = mkPersonalityDir('voices-bot', yaml, {
+        'voices/chef.md': 'Speak like a chef.',
+        'voices/knight.md': 'Speak like a knight to their king.',
+      });
+      const profile = loadPersonalityFromDirectory(dir);
+
+      expect(profile.personality.userVoices).toEqual({
+        '111111111111111111': 'chef',
+        '222222222222222222': 'knight',
+      });
+
+      expect(profile.personality.voices).toEqual({
+        chef: 'Speak like a chef.',
+        knight: 'Speak like a knight to their king.',
       });
     });
   });

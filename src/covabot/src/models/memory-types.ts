@@ -141,6 +141,7 @@ export interface LlmContext {
   traitModifiers: string;
   engagementContext: EngagementContext;
   userRelationshipsModifier?: string;
+  userVoiceModifier?: string;
 }
 
 // ─── Profile Config Types (mirrors YAML schema) ───────────────────────────
@@ -173,6 +174,7 @@ export interface PersonalityConfig {
   topic_affinities?: string[];
   background_facts?: string[];
   user_relationships?: Record<string, string>;
+  user_voices?: Record<string, string>;
   speech_patterns: SpeechPatterns;
 }
 
@@ -211,6 +213,8 @@ export interface CovaProfile {
     topicAffinities: string[]; // engagement signals — not talking points
     backgroundFacts: string[]; // personal details — rarely mentioned
     userRelationships: Record<string, string>; // specific instructions for specific users
+    userVoices: Record<string, string>; // specific voice key per user ID (Map: userId -> voiceKey)
+    voices: Record<string, string>; // generic voice templates (Map: voiceKey -> promptContent)
     speechPatterns: SpeechPatterns;
   };
   socialBattery: {

@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { LlmService } from '../../src/services/llm-service';
 import type { CovaProfile, LlmContext } from '../../src/models/memory-types';
 
@@ -44,6 +44,8 @@ const baseProfile: CovaProfile = {
     topicAffinities: ['testing', 'typescript'],
     backgroundFacts: [],
     userRelationships: {},
+    userVoices: {},
+    voices: {},
     speechPatterns: { lowercase: true, sarcasmLevel: 0.5, technicalBias: 0.5 },
   },
   socialBattery: { maxMessages: 3, windowMinutes: 10, cooldownSeconds: 5 },
@@ -72,6 +74,10 @@ describe('LlmService', () => {
   beforeEach(() => {
     lastMessages = null;
     lastOptions = null;
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
   });
 
   it('builds messages, calls provider and applies speech patterns', async () => {
@@ -195,11 +201,24 @@ describe('LlmService', () => {
 
   it('rethrows on provider failure', async () => {
     const { LlmProviderManager } = await import('@starbunk/shared');
-    vi.spyOn(LlmProviderManager.prototype as any, 'generateCompletion').mockRejectedValue(
+    vi.spyOn(LlmProviderManager.prototype as any, 'generateCompletion').mockRejectedValueOnce(
       new Error('boom'),
     );
 
     const svc = new LlmService();
     await expect(svc.generateResponse(baseProfile, baseContext, 'x', 'y')).rejects.toThrow('boom');
+  });
+
+  it('appends userVoiceModifier to the system prompt if present in context', async () => {
+    const svc = new LlmService();
+    const customContext = {
+      ...baseContext,
+      userVoiceModifier: 'Speak like a pirate to Alice.',
+    };
+    await svc.generateResponse(baseProfile, customContext, 'Ahoy!', 'Alice');
+
+    expect(lastMessages).toBeTruthy();
+    const sys = String(lastMessages![0].content);
+    expect(sys).toContain('Speak like a pirate to Alice.');
   });
 });

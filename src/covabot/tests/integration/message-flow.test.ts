@@ -82,6 +82,8 @@ describe('Message Flow Integration', () => {
       topicAffinities: ['typescript', 'react', 'testing'],
       backgroundFacts: [],
       userRelationships: {},
+      userVoices: {},
+      voices: {},
       speechPatterns: { lowercase: true, sarcasmLevel: 0.3, technicalBias: 0.5 },
     },
     nameAliases: ['test bot', 'testbot'],

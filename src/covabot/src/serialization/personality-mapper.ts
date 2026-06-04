@@ -31,6 +31,8 @@ export function mapToCovaProfile(config: YamlConfigType): CovaProfile {
       .map(s => String(s).trim())
       .filter(Boolean),
     userRelationships: rawProfile.personality.user_relationships ?? {},
+    userVoices: rawProfile.personality.user_voices ?? {},
+    voices: {},
     speechPatterns: normalizeSpeechPatterns(rawProfile.personality.speech_patterns),
   } as CovaProfile['personality'];
 
