@@ -49,7 +49,7 @@ export class GeminiProvider implements LlmProvider {
       model,
       messages: messages.map(m => ({ role: m.role, content: m.content })),
       temperature: options.temperature ?? 0.7,
-      max_tokens: options.maxTokens ?? 500,
+      max_tokens: options.maxTokens ?? 1000,
     });
 
     const content = completion.choices[0]?.message?.content || '';
@@ -62,6 +62,8 @@ export class GeminiProvider implements LlmProvider {
       model: completion.model,
       tokensUsed,
       provider: this.name,
+      // Gemini uses the OpenAI-compat endpoint; finish_reason is string | null — normalise to undefined
+      finishReason: completion.choices[0]?.finish_reason ?? undefined,
     };
   }
 }

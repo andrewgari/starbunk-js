@@ -21,6 +21,7 @@ interface AnthropicMessage {
 interface AnthropicResponse {
   id: string;
   model: string;
+  stop_reason?: string;
   content: Array<{ type: string; text: string }>;
   usage: {
     input_tokens: number;
@@ -70,7 +71,7 @@ export class AnthropicProvider implements LlmProvider {
     const body: Record<string, unknown> = {
       model,
       messages: conversationMessages,
-      max_tokens: options.maxTokens ?? 500,
+      max_tokens: options.maxTokens ?? 1000,
       temperature: options.temperature ?? 0.7,
     };
     if (systemMessage) {
@@ -103,6 +104,7 @@ export class AnthropicProvider implements LlmProvider {
       model: data.model,
       tokensUsed,
       provider: this.name,
+      finishReason: data.stop_reason,
     };
   }
 }

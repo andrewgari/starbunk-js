@@ -36,9 +36,9 @@ fi
 
 # Determine docker-compose command
 if command -v docker-compose &> /dev/null; then
-  COMPOSE_CMD="docker-compose"
+  COMPOSE_CMD="docker-compose --env-file stack.env"
 elif docker compose version &> /dev/null; then
-  COMPOSE_CMD="docker compose"
+  COMPOSE_CMD="docker compose --env-file stack.env"
 else
   echo "❌ Error: Neither docker-compose nor docker compose is available"
   exit 1
@@ -106,7 +106,7 @@ backup_current_state() {
   mkdir -p "$SAFETY_BACKUP_DIR"
 
   cp docker-compose.yml "$SAFETY_BACKUP_DIR/" 2>/dev/null || true
-  cp .env "$SAFETY_BACKUP_DIR/" 2>/dev/null || true
+  cp stack.env "$SAFETY_BACKUP_DIR/" 2>/dev/null || true
   $COMPOSE_CMD ps --format json > "$SAFETY_BACKUP_DIR/containers.json" 2>/dev/null || true
 
   echo "✅ Safety backup created: $SAFETY_BACKUP_DIR"
@@ -135,12 +135,12 @@ restore_configuration() {
     echo "⚠️  No docker-compose.yml in backup - keeping current"
   fi
 
-  # Restore .env if it exists in backup
-  if [ -f "$BACKUP_DIR/.env" ]; then
-    cp "$BACKUP_DIR/.env" ./.env
-    echo "✅ Restored .env"
+  # Restore stack.env if it exists in backup
+  if [ -f "$BACKUP_DIR/stack.env" ]; then
+    cp "$BACKUP_DIR/stack.env" ./stack.env
+    echo "✅ Restored stack.env"
   else
-    echo "⚠️  No .env in backup - keeping current"
+    echo "⚠️  No stack.env in backup - keeping current"
   fi
 
   echo ""

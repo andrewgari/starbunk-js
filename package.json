@@ -1,6 +1,6 @@
 {
-  "name": "bunkbot",
-  "version": "1.44.0",
+  "name": "starbunk-monorepo",
+  "version": "1.31.0",
   "description": "it's bot that says blu, among things...",
   "type": "commonjs",
   "workspaces": [
@@ -8,7 +8,11 @@
   ],
   "scripts": {
     "generate-personality": "node scripts/generate-personality.mjs",
-    "sync-versions": "bash ./scripts/sync-versions.sh",
+    "cs": "changeset",
+    "cs:status": "changeset status",
+    "cs:version": "changeset version",
+    "cs:publish": "changeset publish",
+    "show-versions": "for pkg in src/shared src/bunkbot src/djcova src/covabot src/bluebot; do echo \"$(node -p \\\"require('./$pkg/package.json').name\\\"): $(node -p \\\"require('./$pkg/package.json').version\\\")\"; done",
     "build": "npm run build:shared && npm run build:containers",
     "build:clean": "tsc --build --clean && npm run build",
     "build:shared": "tsc --build src/shared && npx tsc-alias -p src/shared/tsconfig.json --debug",
@@ -39,11 +43,10 @@
     "health-check": "scripts/monitoring/structure-health-check.sh",
     "ralph:pr-comments": "bash scripts/ai/ralph-pr-comments.sh",
     "ralph:fix": "bash scripts/ai/ralph-fix-errors.sh",
-    "setup:config": "bash scripts/setup-config.sh",
-    "release": "semantic-release"
+    "setup:config": "bash scripts/setup-config.sh"
   },
   "engines": {
-    "node": ">=20.0.0"
+    "node": ">=24.0.0"
   },
   "repository": {
     "type": "git",
@@ -74,19 +77,14 @@
     "uuid": "^14.0.0"
   },
   "devDependencies": {
-    "@semantic-release/changelog": "^6.0.3",
-    "@semantic-release/exec": "^7.1.0",
-    "@semantic-release/git": "^10.0.1",
-    "@semantic-release/github": "^12.0.2",
+    "@changesets/cli": "^2.31.0",
     "@typescript-eslint/eslint-plugin": "^8.34.0",
     "@typescript-eslint/parser": "^8.34.0",
-    "conventional-changelog-conventionalcommits": "^9.1.0",
     "eslint": "^8.56.0",
     "husky": "^9.1.7",
     "lint-staged": "^16.1.5",
     "prettier": "^3.2.5",
     "rimraf": "^5.0.1",
-    "semantic-release": "^25.0.2",
     "tsc-alias": "^1.8.16",
     "typescript": "~5.3.0",
     "zod-to-json-schema": "^3.25.1"

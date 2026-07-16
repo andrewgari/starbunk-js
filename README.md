@@ -150,7 +150,6 @@ local/                       # Runtime data (not committed)
 data/                        # Database data (not committed)
 ├── postgres/               # PostgreSQL data
 ├── redis/                  # Redis snapshots
-└── qdrant/                 # Vector DB data
 ```
 
 **Key Directories:**
@@ -225,13 +224,6 @@ REDIS_PASSWORD=your_password
 - **Port**: 5432 (internal only)
 - **Memory**: 512MB limit
 - **Data**: `/data/postgres` volume mount
-
-### Qdrant - Vector Database
-- **Purpose**: Saliency/interest matching, semantic search
-- **Service**: `starbunk-qdrant` (container: `starbunk-vectordb`)
-- **Port**: 6333 (internal only)
-- **Memory**: 512MB limit
-- **Data**: `/data/qdrant` volume mount
 
 **Architecture Notes**:
 - All database services run within the `starbunk-network` and are not exposed to the host
@@ -318,7 +310,6 @@ graph TD
     subgraph "Database Services"
         PostgresDB[(PostgreSQL<br/>Persistent Data)]
         RedisDB[(Redis<br/>Cache/Sessions)]
-        QdrantDB[(Qdrant<br/>Vector Search)]
     end
 
     subgraph "External Services"
@@ -329,7 +320,6 @@ graph TD
     BunkBot --> PostgresDB
     CovaBot --> PostgresDB
     CovaBot --> RedisDB
-    CovaBot --> QdrantDB
     BlueBot --> PostgresDB
 
     CovaBot --> LLM
@@ -342,7 +332,6 @@ graph TD
     style BlueBot fill:#e3f2fd,stroke:#1565c0,stroke-width:2px
     style PostgresDB fill:#336791,stroke:#fff,stroke-width:2px,color:#fff
     style RedisDB fill:#DC382D,stroke:#fff,stroke-width:2px,color:#fff
-    style QdrantDB fill:#24386C,stroke:#fff,stroke-width:2px,color:#fff
     style LLM fill:#bfb,stroke:#333,stroke-width:1px
 ```
 
@@ -454,7 +443,6 @@ This scoping avoids unrelated failures on PRs while still enforcing correctness 
 | **BlueBot** | 0.25-0.5 cores | 512MB | Minimal | Low |
 | **PostgreSQL** | 0.5 cores | 512MB | High | Low |
 | **Redis** | 0.25 cores | 256MB | Low (snapshots) | Low |
-| **Qdrant** | 0.5 cores | 512MB | Moderate | Low |
 | **OTEL Collector** | 0.5 cores | 512MB | Minimal | Moderate |
 
 ## 🔧 Troubleshooting
@@ -489,13 +477,9 @@ docker-compose exec starbunk-redis redis-cli ping
 # Test Redis with password
 docker-compose exec starbunk-redis redis-cli -a your_password ping
 
-# Check Qdrant status
-docker-compose ps starbunk-qdrant
-
 # View database service logs
 docker-compose logs starbunk-redis
 docker-compose logs starbunk-postgres
-docker-compose logs starbunk-qdrant
 ```
 
 ## 📜 License

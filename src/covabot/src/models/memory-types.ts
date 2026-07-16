@@ -31,14 +31,14 @@ export interface ConversationRow {
 }
 
 export interface UserFactRow {
-  id: number;
+  id: string; // UUID
   profile_id: string;
   user_id: string;
   fact_type: 'interest' | 'relationship' | 'preference';
   fact_key: string;
   fact_value: string;
   confidence: number;
-  learned_at: string;
+  learned_at: Date;
 }
 
 export interface PersonalityEvolutionRow {
@@ -99,7 +99,14 @@ export interface InterestMatch {
 
 // ─── Decision Types ───────────────────────────────────────────────────────
 
-export type ResponseReason = 'direct_mention' | 'llm_response' | 'ignored';
+export type ResponseReason =
+  | 'direct_mention' // respond: user @mentioned the bot
+  | 'llm_response' // respond: passed to LLM for engagement decision
+  | 'self_message' // skip: bot's own message
+  | 'bot_author' // skip: message from another bot
+  | 'empty_message' // skip: no content
+  | 'rate_limited' // skip: social battery depleted
+  | 'llm_ignored'; // skip: LLM chose to stay silent
 
 export interface ResponseDecision {
   shouldRespond: boolean;
@@ -112,6 +119,7 @@ export interface EngagementContext {
   nameReferenced: boolean; // bot name/alias appears in message text
   isDirectExchange: boolean; // only 1-2 unique human speakers in recent history
   activeParticipants: string[]; // display names of recent human speakers
+  activeParticipantIds: string[]; // Discord User IDs of recent human speakers
   secondsSinceLastResponse: number | null;
   conversationMessageCount: number;
 }
@@ -132,17 +140,11 @@ export interface LlmContext {
   userFacts: string;
   traitModifiers: string;
   engagementContext: EngagementContext;
+  userRelationshipsModifier?: string;
+  userVoiceModifier?: string;
 }
 
 // ─── Profile Config Types (mirrors YAML schema) ───────────────────────────
-
-export interface BotIdentityConfig {
-  type: 'static' | 'mimic' | 'random';
-  botName?: string;
-  avatarUrl?: string;
-  // as_member intentionally uses snake_case to match the YAML field name
-  as_member?: string;
-}
 
 export interface SpeechPatterns {
   lowercase: boolean;
@@ -171,6 +173,8 @@ export interface PersonalityConfig {
   interests: string[];
   topic_affinities?: string[];
   background_facts?: string[];
+  user_relationships?: Record<string, string>;
+  user_voices?: Record<string, string>;
   speech_patterns: SpeechPatterns;
 }
 
@@ -183,9 +187,7 @@ export interface PersonalityConfig {
 export interface ProfileConfig {
   id: string;
   display_name: string;
-  avatar_url?: string;
   name_aliases?: string[];
-  identity: BotIdentityConfig;
   personality: PersonalityConfig;
   social_battery: SocialBatteryConfig;
   memory?: { channel_window?: number };
@@ -203,15 +205,16 @@ export interface ProfileConfig {
 export interface CovaProfile {
   id: string;
   displayName: string;
-  avatarUrl?: string;
   nameAliases: string[]; // names/aliases used to detect when the bot is being addressed
-  identity: BotIdentityConfig;
   personality: {
     systemPrompt: string;
     traits: string[];
     interests: string[]; // kept for backward compat / InterestService
     topicAffinities: string[]; // engagement signals — not talking points
     backgroundFacts: string[]; // personal details — rarely mentioned
+    userRelationships: Record<string, string>; // specific instructions for specific users
+    userVoices: Record<string, string>; // specific voice key per user ID (Map: userId -> voiceKey)
+    voices: Record<string, string>; // generic voice templates (Map: voiceKey -> promptContent)
     speechPatterns: SpeechPatterns;
   };
   socialBattery: {

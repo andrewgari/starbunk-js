@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { LlmService } from '../../src/services/llm-service';
 import type { CovaProfile, LlmContext } from '../../src/models/memory-types';
 
@@ -43,6 +43,9 @@ const baseProfile: CovaProfile = {
     interests: ['testing', 'typescript'],
     topicAffinities: ['testing', 'typescript'],
     backgroundFacts: [],
+    userRelationships: {},
+    userVoices: {},
+    voices: {},
     speechPatterns: { lowercase: true, sarcasmLevel: 0.5, technicalBias: 0.5 },
   },
   socialBattery: { maxMessages: 3, windowMinutes: 10, cooldownSeconds: 5 },
@@ -61,6 +64,7 @@ const baseContext: LlmContext = {
     nameReferenced: false,
     isDirectExchange: false,
     activeParticipants: ['Alice'],
+    activeParticipantIds: ['user-alice'],
     secondsSinceLastResponse: 120,
     conversationMessageCount: 2,
   },
@@ -70,6 +74,10 @@ describe('LlmService', () => {
   beforeEach(() => {
     lastMessages = null;
     lastOptions = null;
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
   });
 
   it('builds messages, calls provider and applies speech patterns', async () => {
@@ -139,13 +147,78 @@ describe('LlmService', () => {
     expect(svc.getProviderManager()).toBeDefined();
   });
 
+  it('suppresses response when finishReason is max_tokens (Anthropic truncation)', async () => {
+    const { LlmProviderManager } = await import('@starbunk/shared');
+    vi.spyOn(LlmProviderManager.prototype as any, 'generateCompletion').mockResolvedValue({
+      content: 'This sentence was cut off mid',
+      tokensUsed: 128,
+      model: 'claude-3-sonnet',
+      provider: 'anthropic',
+      finishReason: 'max_tokens',
+    });
+
+    const svc = new LlmService();
+    const res = await svc.generateResponse(baseProfile, baseContext, 'Tell me more', 'Alice');
+    expect(res.shouldIgnore).toBe(true);
+    expect(res.content).toBe('');
+    expect(res.tokensUsed).toBe(128);
+    expect(res.provider).toBe('anthropic');
+  });
+
+  it('suppresses response when finishReason is length (Ollama/OpenAI/Gemini truncation)', async () => {
+    const { LlmProviderManager } = await import('@starbunk/shared');
+    vi.spyOn(LlmProviderManager.prototype as any, 'generateCompletion').mockResolvedValue({
+      content: 'This sentence was also cut',
+      tokensUsed: 64,
+      model: 'gemini-2.5-flash',
+      provider: 'gemini',
+      finishReason: 'length',
+    });
+
+    const svc = new LlmService();
+    const res = await svc.generateResponse(baseProfile, baseContext, 'Tell me more', 'Alice');
+    expect(res.shouldIgnore).toBe(true);
+    expect(res.content).toBe('');
+    expect(res.tokensUsed).toBe(64);
+    expect(res.provider).toBe('gemini');
+  });
+
+  it('does not suppress response when finishReason is stop (normal completion)', async () => {
+    const { LlmProviderManager } = await import('@starbunk/shared');
+    vi.spyOn(LlmProviderManager.prototype as any, 'generateCompletion').mockResolvedValue({
+      content: 'This Is A COMPLETE RESPONSE',
+      tokensUsed: 20,
+      model: 'fake-model',
+      provider: 'fake-provider',
+      finishReason: 'stop',
+    });
+
+    const svc = new LlmService();
+    const res = await svc.generateResponse(baseProfile, baseContext, 'Hello?', 'Alice');
+    expect(res.shouldIgnore).toBe(false);
+    expect(res.content).toBe('this is a complete response');
+  });
+
   it('rethrows on provider failure', async () => {
     const { LlmProviderManager } = await import('@starbunk/shared');
-    vi.spyOn(LlmProviderManager.prototype as any, 'generateCompletion').mockRejectedValue(
+    vi.spyOn(LlmProviderManager.prototype as any, 'generateCompletion').mockRejectedValueOnce(
       new Error('boom'),
     );
 
     const svc = new LlmService();
     await expect(svc.generateResponse(baseProfile, baseContext, 'x', 'y')).rejects.toThrow('boom');
+  });
+
+  it('appends userVoiceModifier to the system prompt if present in context', async () => {
+    const svc = new LlmService();
+    const customContext = {
+      ...baseContext,
+      userVoiceModifier: 'Speak like a pirate to Alice.',
+    };
+    await svc.generateResponse(baseProfile, customContext, 'Ahoy!', 'Alice');
+
+    expect(lastMessages).toBeTruthy();
+    const sys = String(lastMessages![0].content);
+    expect(sys).toContain('Speak like a pirate to Alice.');
   });
 });

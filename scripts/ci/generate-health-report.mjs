@@ -40,7 +40,7 @@ const audit     = readOutput('audit-output.txt', 2000);
 const outdated  = readOutput('outdated-output.txt', 1500);
 const gitLog    = readOutput('git-log.txt', 2000);
 
-const prompt = `You are a senior engineer performing a weekly health review of **starbunk-js** — a TypeScript Discord bot monorepo with four containers: BunkBot (reply bots), DJCova (music), CovaBot (AI personality), and BlueBot (pattern matching). Stack: Node 22, Discord.js 14, TypeScript, PostgreSQL, Redis, Qdrant.
+const prompt = `You are a senior engineer performing a weekly health review of **starbunk-js** — a TypeScript Discord bot monorepo with four containers: BunkBot (reply bots), DJCova (music), CovaBot (AI personality), and BlueBot (pattern matching). Stack: Node 22, Discord.js 14, TypeScript, PostgreSQL, Redis.
 
 Below are automated check outputs from **${date}**. Write a concise GitHub Issue body in Markdown as the weekly health report. Use these exact sections:
 

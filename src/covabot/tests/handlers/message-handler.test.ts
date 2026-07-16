@@ -3,12 +3,6 @@ import type { Message, User, Guild } from 'discord.js';
 import { MessageHandler } from '../../src/handlers/message-handler';
 import type { CovaProfile } from '../../src/models/memory-types';
 
-// Mock DiscordService singleton used inside the handler
-const mockSendMessageWithBotIdentity = vi.fn();
-const mockGetBotIdentityFromDiscord: any = vi.fn(async (..._args: any[]) => ({
-  botName: 'Mimic',
-  avatarUrl: 'x',
-}));
 let getClientImpl: any = () => ({ user: { id: 'bot-123' } });
 
 vi.mock('@starbunk/shared/discord/discord-service', () => ({
@@ -20,12 +14,6 @@ vi.mock('@starbunk/shared/discord/discord-service', () => ({
     }
     getClient() {
       return getClientImpl();
-    }
-    sendMessageWithBotIdentity(message: any, identity: any, content: any) {
-      return mockSendMessageWithBotIdentity(message, identity, content);
-    }
-    getBotIdentityFromDiscord(guildId: string, memberId: string) {
-      return mockGetBotIdentityFromDiscord(guildId, memberId);
     }
   },
 }));
@@ -57,12 +45,12 @@ function createMessage(
     author: { id: cfg.authorId!, username: cfg.authorUsername!, bot: false } as User,
     guild: cfg.guildId ? ({ id: cfg.guildId } as Guild) : null,
     mentions: { users: { has: (_: string) => false } },
+    reply: vi.fn(),
   } as unknown as Message;
 }
 
 describe('MessageHandler', () => {
   let profile: CovaProfile;
-  let profiles: Map<string, CovaProfile>;
 
   // Service mocks
   const memoryService = {
@@ -92,20 +80,20 @@ describe('MessageHandler', () => {
 
   beforeEach(() => {
     vi.restoreAllMocks();
-    mockSendMessageWithBotIdentity.mockClear();
-    mockGetBotIdentityFromDiscord.mockClear();
     getClientImpl = () => ({ user: { id: 'bot-123' } });
 
     profile = {
       id: 'p1',
       displayName: 'Test',
-      identity: { type: 'static', botName: 'Test' },
       personality: {
         systemPrompt: 'You are Test.',
         traits: [],
         interests: [],
         topicAffinities: [],
         backgroundFacts: [],
+        userRelationships: {},
+        userVoices: {},
+        voices: {},
         speechPatterns: { lowercase: true, sarcasmLevel: 0.1, technicalBias: 0.1 },
       },
       nameAliases: [],
@@ -114,7 +102,6 @@ describe('MessageHandler', () => {
       llmConfig: { model: 'fake', temperature: 0.2, max_tokens: 64 },
       ignoreBots: true,
     };
-    profiles = new Map([[profile.id, profile]]);
   });
 
   it('uses LLM and records memory', async () => {
@@ -131,7 +118,7 @@ describe('MessageHandler', () => {
     });
 
     const handler = new MessageHandler(
-      profiles,
+      profile,
       memoryService,
       decisionService,
       llmService,
@@ -143,14 +130,13 @@ describe('MessageHandler', () => {
     await handler.handleMessage(msg);
 
     expect(llmService.generateResponse).toHaveBeenCalled();
-    expect(mockSendMessageWithBotIdentity).toHaveBeenCalled();
+    expect(msg.reply).toHaveBeenCalledWith('sure, how can i help?');
     const call = memoryService.storeConversation.mock.calls.at(-1);
     expect(call[5]).toBe('sure, how can i help?');
   });
 
   it('skips sending when LLM says to ignore', async () => {
     // Ensure previous calls do not leak into this test
-    mockSendMessageWithBotIdentity.mockReset();
     memoryService.storeConversation.mockReset();
     socialBatteryService.recordMessage.mockReset();
     decisionService.shouldRespond.mockResolvedValueOnce({
@@ -166,7 +152,7 @@ describe('MessageHandler', () => {
     });
 
     const handler = new MessageHandler(
-      profiles,
+      profile,
       memoryService,
       decisionService,
       llmService,
@@ -177,8 +163,15 @@ describe('MessageHandler', () => {
     const msg = createMessage({ content: 'ping' });
     await handler.handleMessage(msg);
 
-    expect(mockSendMessageWithBotIdentity).not.toHaveBeenCalled();
-    expect(memoryService.storeConversation).not.toHaveBeenCalled();
+    expect(msg.reply).not.toHaveBeenCalled();
+    expect(memoryService.storeConversation).toHaveBeenCalledWith(
+      'p1',
+      'c1',
+      'u1',
+      'Alice',
+      'ping',
+      null,
+    );
     expect(socialBatteryService.recordMessage).not.toHaveBeenCalled();
   });
 
@@ -186,7 +179,7 @@ describe('MessageHandler', () => {
     getClientImpl = () => ({ user: undefined });
     decisionService.shouldRespond.mockReset();
     const handler = new MessageHandler(
-      profiles,
+      profile,
       memoryService,
       decisionService,
       llmService,
@@ -196,5 +189,104 @@ describe('MessageHandler', () => {
     const msg = createMessage({ content: 'hello' });
     await handler.handleMessage(msg);
     expect(decisionService.shouldRespond).not.toHaveBeenCalled();
+  });
+
+  it('always includes the message author as an active participant and loads their relationship', async () => {
+    decisionService.shouldRespond.mockResolvedValue({
+      shouldRespond: true,
+      reason: 'llm_response',
+    });
+    llmService.generateResponse.mockResolvedValue({
+      content: 'hello',
+      shouldIgnore: false,
+      tokensUsed: 1,
+      model: 'm',
+      provider: 'p',
+    });
+
+    profile.personality.userRelationships = {
+      'user-author-123': 'You are extremely loyal to this user like a Knight to their King.',
+    };
+
+    const handler = new MessageHandler(
+      profile,
+      memoryService,
+      decisionService,
+      llmService,
+      personalityService,
+      socialBatteryService,
+    );
+
+    const msg = createMessage({
+      authorId: 'user-author-123',
+      authorUsername: 'KingAndrew',
+      content: 'Hello, bot.',
+    });
+    await handler.handleMessage(msg);
+
+    // Verify the arguments passed to generateResponse
+    expect(llmService.generateResponse).toHaveBeenCalled();
+    const [passedProfile, passedContext, passedContent, passedUsername] =
+      llmService.generateResponse.mock.calls.at(-1)!;
+
+    expect(passedContext.engagementContext.activeParticipantIds).toContain('user-author-123');
+    expect(passedContext.engagementContext.activeParticipants).toContain('KingAndrew');
+    expect(passedContext.userRelationshipsModifier).toContain(
+      'You are extremely loyal to this user like a Knight to their King.',
+    );
+  });
+
+  it('includes the userVoiceModifier when the message author has a voice instruction, and is undefined otherwise', async () => {
+    decisionService.shouldRespond.mockResolvedValue({
+      shouldRespond: true,
+      reason: 'llm_response',
+    });
+    llmService.generateResponse.mockResolvedValue({
+      content: 'hello',
+      shouldIgnore: false,
+      tokensUsed: 1,
+      model: 'm',
+      provider: 'p',
+    });
+
+    profile.personality.userVoices = {
+      'user-sarcastic-123': 'sarcastic',
+    };
+    profile.personality.voices = {
+      sarcastic: 'You speak extremely sarcastically to this person.',
+    };
+
+    const handler = new MessageHandler(
+      profile,
+      memoryService,
+      decisionService,
+      llmService,
+      personalityService,
+      socialBatteryService,
+    );
+
+    // Case 1: Message author has a voice instruction
+    const msgWithVoice = createMessage({
+      authorId: 'user-sarcastic-123',
+      authorUsername: 'SarcasticBob',
+      content: 'Hello, bot.',
+    });
+    await handler.handleMessage(msgWithVoice);
+
+    const [, passedContext1] = llmService.generateResponse.mock.calls.at(-1)!;
+    expect(passedContext1.userVoiceModifier).toContain(
+      'You speak extremely sarcastically to this person.',
+    );
+
+    // Case 2: Message author does NOT have a voice instruction
+    const msgWithoutVoice = createMessage({
+      authorId: 'user-normal-123',
+      authorUsername: 'NormalBob',
+      content: 'Hello, bot.',
+    });
+    await handler.handleMessage(msgWithoutVoice);
+
+    const [, passedContext2] = llmService.generateResponse.mock.calls.at(-1)!;
+    expect(passedContext2.userVoiceModifier).toBeUndefined();
   });
 });

@@ -12,7 +12,7 @@
 import { Message } from 'discord.js';
 import { logLayer } from '@starbunk/shared/observability/log-layer';
 import { DiscordService } from '@starbunk/shared/discord/discord-service';
-import { BotIdentity } from '@starbunk/shared/types/bot-identity';
+
 import { MemoryService } from '@/services/memory-service';
 import { ResponseDecisionService, DecisionContext } from '@/services/response-decision-service';
 import { LlmService } from '@/services/llm-service';
@@ -26,11 +26,12 @@ import {
 } from '@/models/memory-types';
 import { VERBOSE_LOGGING } from '@/utils/verbose-mode';
 import { getBotActivityTracker } from '@starbunk/shared/health/bot-activity-tracker';
+import { messageDecisionsTotal } from '@/observability/covabot-metrics';
 
 const logger = logLayer.withPrefix('MessageHandler');
 
 export class MessageHandler {
-  private profiles: Map<string, CovaProfile>;
+  private profile: CovaProfile | null;
   private memoryService: MemoryService;
   private decisionService: ResponseDecisionService;
   private llmService: LlmService;
@@ -38,14 +39,14 @@ export class MessageHandler {
   private socialBatteryService: SocialBatteryService;
 
   constructor(
-    profiles: Map<string, CovaProfile>,
+    profile: CovaProfile | null,
     memoryService: MemoryService,
     decisionService: ResponseDecisionService,
     llmService: LlmService,
     personalityService: PersonalityService,
     socialBatteryService: SocialBatteryService,
   ) {
-    this.profiles = profiles;
+    this.profile = profile;
     this.memoryService = memoryService;
     this.decisionService = decisionService;
     this.llmService = llmService;
@@ -71,6 +72,11 @@ export class MessageHandler {
 
     getBotActivityTracker('bot_activity').onMessageReceived();
 
+    if (!this.profile) {
+      logger.warn('Received message but no profile is loaded — cannot respond');
+      return;
+    }
+
     logger
       .withMetadata({
         message_id: message.id,
@@ -81,20 +87,17 @@ export class MessageHandler {
       })
       .debug('Processing message');
 
-    // Process message for each loaded profile
-    for (const profile of this.profiles.values()) {
-      try {
-        await this.processForProfile(profile, message, botUserId);
-      } catch (error) {
-        logger
-          .withError(error)
-          .withMetadata({
-            profile_id: profile.id,
-            message_id: message.id,
-          })
-          .error('Error processing message for profile');
-        getBotActivityTracker('bot_activity').onError('profile_processing');
-      }
+    try {
+      await this.processForProfile(this.profile, message, botUserId);
+    } catch (error) {
+      logger
+        .withError(error)
+        .withMetadata({
+          profile_id: this.profile.id,
+          message_id: message.id,
+        })
+        .error('Error processing message for profile');
+      getBotActivityTracker('bot_activity').onError('profile_processing');
     }
 
     const duration = Date.now() - startTime;
@@ -102,7 +105,7 @@ export class MessageHandler {
       .withMetadata({
         message_id: message.id,
         duration_ms: duration,
-        profiles_count: this.profiles.size,
+        profiles_count: this.profile ? 1 : 0,
       })
       .debug('Message processing complete');
   }
@@ -124,14 +127,46 @@ export class MessageHandler {
     }
 
     if (!decision.shouldRespond) {
-      if (VERBOSE_LOGGING) {
+      // Log human-visible skips at INFO so Loki can surface them in the dashboard.
+      // Bot/self/empty filters are structural noise — skip those.
+      if (
+        decision.reason !== 'self_message' &&
+        decision.reason !== 'bot_author' &&
+        decision.reason !== 'empty_message'
+      ) {
+        messageDecisionsTotal.inc({
+          decision: 'skipped',
+          reason: decision.reason,
+          channel_id: message.channelId,
+          profile_id: profile.id,
+        });
+        logger
+          .withMetadata({
+            event: 'message_skipped',
+            profile_id: profile.id,
+            channel_id: message.channelId,
+            author_name: message.author.username,
+            content_preview: message.content.substring(0, 100),
+            reason: decision.reason,
+          })
+          .info('Message skipped');
+
+        // Step 1.5: Record the user message even if we skip (unless it's structural noise)
+        await this.memoryService.storeConversation(
+          profile.id,
+          message.channelId,
+          message.author.id,
+          message.author.username,
+          message.content,
+          null,
+        );
+      } else if (VERBOSE_LOGGING) {
         logger
           .withMetadata({
             profile_id: profile.id,
             reason: decision.reason,
             channel_id: message.channelId,
             author: message.author.username,
-            content_preview: message.content.substring(0, 80),
           })
           .info('Not responding to message');
       } else {
@@ -155,18 +190,35 @@ export class MessageHandler {
             content_preview: message.content.substring(0, 80),
           })
           .warn('LLM returned IGNORE for a direct @mention — this is a prompt compliance failure');
-      } else if (VERBOSE_LOGGING) {
+      } else {
+        messageDecisionsTotal.inc({
+          decision: 'skipped',
+          reason: 'llm_ignored',
+          channel_id: message.channelId,
+          profile_id: profile.id,
+        });
         logger
           .withMetadata({
+            event: 'message_skipped',
             profile_id: profile.id,
             channel_id: message.channelId,
-            author: message.author.username,
-            content_preview: message.content.substring(0, 80),
+            author_name: message.author.username,
+            content_preview: message.content.substring(0, 100),
+            reason: 'llm_ignored',
           })
-          .info('LLM chose to stay silent (IGNORE)');
-      } else {
-        logger.withMetadata({ profile_id: profile.id }).debug('LLM decided to ignore');
+          .info('Message skipped (LLM chose silence)');
       }
+
+      // Step 2.5: Record the user message even if LLM ignores
+      await this.memoryService.storeConversation(
+        profile.id,
+        message.channelId,
+        message.author.id,
+        message.author.username,
+        message.content,
+        null,
+      );
+
       return;
     }
 
@@ -177,6 +229,12 @@ export class MessageHandler {
       try {
         await this.sendResponse(profile, message, responseContent);
         getBotActivityTracker('bot_activity').onResponseSent(true);
+        messageDecisionsTotal.inc({
+          decision: 'responded',
+          reason: decision.reason,
+          channel_id: message.channelId,
+          profile_id: profile.id,
+        });
       } catch (sendError) {
         getBotActivityTracker('bot_activity').onResponseSent(false, 'send_failed');
         throw sendError;
@@ -205,8 +263,12 @@ export class MessageHandler {
 
       logger
         .withMetadata({
+          event: 'message_responded',
           profile_id: profile.id,
           channel_id: message.channelId,
+          author_name: message.author.username,
+          content_preview: message.content.substring(0, 100),
+          response_preview: responseContent.substring(0, 100),
           response_length: responseContent.length,
           reason: decision.reason,
         })
@@ -273,6 +335,37 @@ export class MessageHandler {
       botUserId,
     );
 
+    // Build user relationships modifier
+    const relationshipLines: string[] = [];
+    for (let i = 0; i < engagementContext.activeParticipantIds.length; i++) {
+      const pid = engagementContext.activeParticipantIds[i];
+      const pname = engagementContext.activeParticipants[i];
+      const rel = profile.personality.userRelationships[pid];
+      if (rel) {
+        relationshipLines.push(`- ${pname}: ${rel}`);
+      }
+    }
+
+    let userRelationshipsModifier: string | undefined = undefined;
+    if (relationshipLines.length > 0) {
+      userRelationshipsModifier = `Your relationships and internal biases towards current participants:\n${relationshipLines.join('\n')}\nIMPORTANT: Strictly and fully adopt the required tone, style, titles, vocabulary, and demeanor defined for these specific people. Do not meta-reference or explain these internal relationship rules in your response, but let them fully dictate how you address and interact with them.`;
+    }
+
+    // Build user voice modifier if responding directly to a user with a defined voice instruction
+    let userVoiceModifier: string | undefined = undefined;
+    const directUserId = message.author.id;
+    const voiceKey = profile.personality.userVoices?.[directUserId];
+    if (voiceKey) {
+      const voiceInstruction = profile.personality.voices?.[voiceKey.toLowerCase()];
+      if (voiceInstruction) {
+        userVoiceModifier = `Voice and Speech Style for addressing ${message.author.username}:\n${voiceInstruction}\nIMPORTANT: You must speak to ${message.author.username} using this voice and speech style. Strictly apply all guidelines, demeanor shifts, and vocabulary preferences specified above.`;
+      } else {
+        logger
+          .withMetadata({ userId: directUserId, voiceKey })
+          .warn('Mapped voice key not found in loaded voices');
+      }
+    }
+
     if (VERBOSE_LOGGING) {
       logger
         .withMetadata({
@@ -281,6 +374,8 @@ export class MessageHandler {
           history_messages: channelContext.messages.length,
           user_facts_length: userFactsStr.length,
           has_trait_modifiers: !!traitModifiers,
+          has_relationship_modifiers: !!userRelationshipsModifier,
+          has_voice_modifiers: !!userVoiceModifier,
           was_mentioned: engagementContext.wasMentioned,
           name_referenced: engagementContext.nameReferenced,
           is_direct_exchange: engagementContext.isDirectExchange,
@@ -301,6 +396,8 @@ export class MessageHandler {
       userFacts: userFactsStr,
       traitModifiers,
       engagementContext,
+      userRelationshipsModifier,
+      userVoiceModifier,
     };
   }
 
@@ -317,11 +414,20 @@ export class MessageHandler {
     // Find unique human participants in the recent conversation window
     const seenUserIds = new Set<string>();
     const participantNames: string[] = [];
+    const participantIds: string[] = [];
+
+    // Always include the current message author as an active participant
+    if (message.author.id !== botUserId) {
+      seenUserIds.add(message.author.id);
+      participantNames.push(message.author.username);
+      participantIds.push(message.author.id);
+    }
 
     for (const msg of channelContext.messages) {
       if (msg.userId !== botUserId && !seenUserIds.has(msg.userId)) {
         seenUserIds.add(msg.userId);
         participantNames.push(msg.userName || `User-${msg.userId.slice(-4)}`);
+        participantIds.push(msg.userId);
       }
     }
 
@@ -358,75 +464,20 @@ export class MessageHandler {
       nameReferenced,
       isDirectExchange,
       activeParticipants: participantNames,
+      activeParticipantIds: participantIds,
       secondsSinceLastResponse,
       conversationMessageCount: channelContext.messages.length,
     };
   }
 
   /**
-   * Send response via Discord webhook
+   * Send response via Discord API chat calls
    */
   private async sendResponse(
     profile: CovaProfile,
     message: Message,
     content: string,
   ): Promise<void> {
-    const discordService = DiscordService.getInstance();
-
-    // Build bot identity from profile
-    const identity: BotIdentity = await this.resolveBotIdentity(profile, message);
-
-    await discordService.sendMessageWithBotIdentity(message, identity, content);
-  }
-
-  /**
-   * Resolve bot identity based on profile configuration
-   */
-  private async resolveBotIdentity(profile: CovaProfile, message: Message): Promise<BotIdentity> {
-    const identity = profile.identity;
-
-    switch (identity.type) {
-      case 'static':
-        return {
-          botName: identity.botName || profile.displayName,
-          avatarUrl: identity.avatarUrl || profile.avatarUrl || '',
-        };
-
-      case 'mimic':
-        if (identity.as_member && message.guild) {
-          const discordService = DiscordService.getInstance();
-          return discordService.getBotIdentityFromDiscord(message.guild.id, identity.as_member);
-        }
-        // Fallback to profile defaults
-        return {
-          botName: profile.displayName,
-          avatarUrl: profile.avatarUrl || '',
-        };
-
-      case 'random':
-        // Pick random member from guild
-        if (message.guild) {
-          const members = message.guild.members.cache.filter(m => !m.user.bot).map(m => m);
-
-          if (members.length > 0) {
-            const randomMember = members[Math.floor(Math.random() * members.length)];
-            return {
-              botName: randomMember.nickname || randomMember.user.username,
-              avatarUrl: randomMember.displayAvatarURL({ size: 256, extension: 'png' }),
-            };
-          }
-        }
-        // Fallback to profile defaults
-        return {
-          botName: profile.displayName,
-          avatarUrl: profile.avatarUrl || '',
-        };
-
-      default:
-        return {
-          botName: profile.displayName,
-          avatarUrl: profile.avatarUrl || '',
-        };
-    }
+    await message.reply(content);
   }
 }

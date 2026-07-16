@@ -3,28 +3,29 @@ import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
 // Mock personality parser to avoid filesystem access
 vi.mock('../../src/serialization/personality-parser', () => {
   return {
-    loadPersonalitiesFromDirectory: vi.fn(() => [
-      {
-        id: 'p1',
-        displayName: 'Test Persona',
-        avatarUrl: 'https://example.com/a.png',
-        identity: { type: 'static', botName: 'Test Persona' },
-        personality: {
-          systemPrompt: 'You are helpful.',
-          traits: ['helpful'],
-          interests: ['testing'],
-          topicAffinities: ['testing'],
-          backgroundFacts: [],
-          speechPatterns: { lowercase: true, sarcasmLevel: 0.2, technicalBias: 0.3 },
-        },
-        nameAliases: [],
-        socialBattery: { maxMessages: 3, windowMinutes: 10, cooldownSeconds: 5 },
-        memory: { channelWindow: 8 },
-        llmConfig: { model: 'fake', temperature: 0.2, max_tokens: 128 },
-        ignoreBots: true,
+    loadPersonalityFromDirectory: vi.fn(() => ({
+      id: 'p1',
+      displayName: 'Test Persona',
+      avatarUrl: 'https://example.com/a.png',
+      identity: { type: 'static', botName: 'Test Persona' },
+      personality: {
+        systemPrompt: 'You are helpful.',
+        traits: ['helpful'],
+        interests: ['testing'],
+        topicAffinities: ['testing'],
+        backgroundFacts: [],
+        userRelationships: {},
+        userVoices: {},
+        voices: {},
+        speechPatterns: { lowercase: true, sarcasmLevel: 0.2, technicalBias: 0.3 },
       },
-    ]),
-    getDefaultPersonalitiesPath: vi.fn(() => '/tmp/fake-personalities-path'),
+      nameAliases: [],
+      socialBattery: { maxMessages: 3, windowMinutes: 10, cooldownSeconds: 5 },
+      memory: { channelWindow: 8 },
+      llmConfig: { model: 'fake', temperature: 0.2, max_tokens: 128 },
+      ignoreBots: true,
+    })),
+    getDefaultPersonalityPath: vi.fn(() => '/tmp/fake-personalities-path'),
   };
 });
 

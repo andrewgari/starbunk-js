@@ -1,15 +1,25 @@
 name: Deploy to Production
 
-# Push-based deployment: connects to the production server via Tailscale + SSH,
-# runs deploy.sh to pull the latest images and restart containers, then runs
-# health-check.sh to verify all services are healthy.
-# GitHub's Deployments API is automatically managed via the `environment:` key.
+# Push-based deployment: runner joins the tailnet via Tailscale OAuth,
+# then SSHs into Tower using a deploy key to run deploy.sh + health-check.sh.
+#
+# Required secrets (production environment):
+#   TAILSCALE_OAUTH_CLIENT_ID      — Tailscale OAuth client ID (tag:ci)
+#   TAILSCALE_OAUTH_CLIENT_SECRET  — Tailscale OAuth client secret
+#   SSH_PRIVATE_KEY     — Private key whose public half is in Tower's authorized_keys
+#   SSH_HOST            — Tower's Tailscale IP (100.x.x.x)
+#   SSH_USER            — SSH user on Tower (typically root)
+#
+# Required variables (production environment):
+#   PROD_DOCKER_COMPOSE_DIR  — Path on Tower where docker-compose.yml lives
+#
+# Required Tailscale setup (one-time):
+#   1. Create an OAuth client at tailscale.com/admin/settings/oauth
+#      with the "auth_keys" scope and tag:ci assigned.
 
 on:
-  workflow_run:
-    workflows: ["CD / Main Merge"]
-    types: [completed]
-    branches: [main]
+  schedule:
+    - cron: '0 0 * * *'
   workflow_dispatch:
 
 permissions:
@@ -29,22 +39,28 @@ jobs:
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # Needed to diff against the previous deployed commit
 
       - name: Set short SHA
         run: echo "SHORT_SHA=${GITHUB_SHA:0:7}" >> $GITHUB_ENV
 
       - name: Preflight — check required secrets
         env:
+          CLIENT_ID: ${{ secrets.TAILSCALE_OAUTH_CLIENT_ID }}
+          CLIENT_SECRET: ${{ secrets.TAILSCALE_OAUTH_CLIENT_SECRET }}
           KEY: ${{ secrets.SSH_PRIVATE_KEY }}
           HOST: ${{ secrets.SSH_HOST }}
           USER: ${{ secrets.SSH_USER }}
-          TS_KEY: ${{ secrets.TAILSCALE_AUTHKEY }}
+          COMPOSE_DIR: ${{ vars.PROD_DOCKER_COMPOSE_DIR }}
         run: |
           MISSING=""
-          [[ -z "$KEY" ]]    && MISSING="$MISSING SSH_PRIVATE_KEY"
-          [[ -z "$HOST" ]]   && MISSING="$MISSING SSH_HOST"
-          [[ -z "$USER" ]]   && MISSING="$MISSING SSH_USER"
-          [[ -z "$TS_KEY" ]] && MISSING="$MISSING TAILSCALE_AUTHKEY"
+          [[ -z "$CLIENT_ID" ]]     && MISSING="$MISSING TAILSCALE_OAUTH_CLIENT_ID"
+          [[ -z "$CLIENT_SECRET" ]] && MISSING="$MISSING TAILSCALE_OAUTH_CLIENT_SECRET"
+          [[ -z "$KEY" ]]           && MISSING="$MISSING SSH_PRIVATE_KEY"
+          [[ -z "$HOST" ]]          && MISSING="$MISSING SSH_HOST"
+          [[ -z "$USER" ]]          && MISSING="$MISSING SSH_USER"
+          [[ -z "$COMPOSE_DIR" ]]   && MISSING="$MISSING PROD_DOCKER_COMPOSE_DIR"
           if [[ -n "$MISSING" ]]; then
             echo "::error::Missing required secrets:$MISSING"
             exit 1
@@ -53,17 +69,70 @@ jobs:
       - name: Connect to Tailscale
         uses: tailscale/github-action@v3
         with:
-          authkey: ${{ secrets.TAILSCALE_AUTHKEY }}
+          oauth-client-id: ${{ secrets.TAILSCALE_OAUTH_CLIENT_ID }}
+          oauth-secret: ${{ secrets.TAILSCALE_OAUTH_CLIENT_SECRET }}
+          tags: tag:ci
+
+      - name: Verify connectivity to Tower
+        run: tailscale ping --c 3 "${{ secrets.SSH_HOST }}"
 
       - name: Set up SSH
         run: |
           mkdir -p ~/.ssh
           echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/deploy_key
           chmod 600 ~/.ssh/deploy_key
-          ssh-keyscan -H "${{ secrets.SSH_HOST }}" >> ~/.ssh/known_hosts 2>/dev/null || true
+
+      - name: Check if deploy is needed
+        id: check
+        run: |
+          DEPLOYED_SHA=$(ssh -i ~/.ssh/deploy_key \
+            -o StrictHostKeyChecking=accept-new \
+            -o ConnectTimeout=30 \
+            "${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}" \
+            "cat ${{ vars.PROD_DOCKER_COMPOSE_DIR }}/.deployed_commit 2>/dev/null || echo 'none'")
+          
+          if [ "$DEPLOYED_SHA" == "none" ]; then
+            echo "No previous deploy found. Deploy needed."
+            echo "SHOULD_DEPLOY=true" >> $GITHUB_ENV
+          elif [ "$DEPLOYED_SHA" == "${SHORT_SHA}" ] && [ "${{ github.event_name }}" != "workflow_dispatch" ]; then
+            echo "Deploy is up to date with $SHORT_SHA. Skipping."
+            echo "SHOULD_DEPLOY=false" >> $GITHUB_ENV
+          elif [ "${{ github.event_name }}" != "workflow_dispatch" ]; then
+            # Check for production-impacting changes
+            if git diff --quiet $DEPLOYED_SHA..${GITHUB_SHA} -- src/ docker-compose.yml infrastructure/ scripts/deployment/ package.json package-lock.json; then
+              echo "No production-impacting changes since $DEPLOYED_SHA. Skipping."
+              echo "SHOULD_DEPLOY=false" >> $GITHUB_ENV
+            else
+              echo "Production-impacting changes found ($DEPLOYED_SHA -> $SHORT_SHA)."
+              echo "SHOULD_DEPLOY=true" >> $GITHUB_ENV
+            fi
+          else
+            echo "Manual dispatch triggered. Deploying."
+            echo "SHOULD_DEPLOY=true" >> $GITHUB_ENV
+          fi
+
+      - name: Stage docker-compose.yml on Tower
+        if: env.SHOULD_DEPLOY == 'true'
+        run: |
+          scp -i ~/.ssh/deploy_key \
+            -o StrictHostKeyChecking=accept-new \
+            -o ConnectTimeout=30 \
+            docker-compose.yml \
+            "${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:${{ vars.PROD_DOCKER_COMPOSE_DIR }}/docker-compose.yml.incoming"
+
+      - name: Sync infrastructure files to Tower
+        if: env.SHOULD_DEPLOY == 'true'
+        run: |
+          # Sync infrastructure/ (Grafana dashboards, provisioning, Prometheus config, etc.)
+          # to PROD_DOCKER_COMPOSE_DIR/infrastructure/ so bind mounts are always up to date.
+          # Grafana hot-reloads dashboard JSON files every 30s — no restart needed.
+          rsync -az --delete \
+            -e "ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=accept-new -o ConnectTimeout=30" \
+            infrastructure/ \
+            "${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:${{ vars.PROD_DOCKER_COMPOSE_DIR }}/infrastructure/"
 
       - name: Notify — deploy started
-        if: vars.DISCORD_NOTIFY_USER_ID != ''
+        if: env.SHOULD_DEPLOY == 'true' && vars.DISCORD_NOTIFY_USER_ID != ''
         uses: ./.github/actions/discord-dm
         with:
           bot_token: ${{ secrets.DISCORD_NOTIFY_TOKEN }}
@@ -73,25 +142,27 @@ jobs:
             — [View deployment](${{ github.server_url }}/${{ github.repository }}/deployments/activity_log?environment=production)
 
       - name: Deploy
+        if: env.SHOULD_DEPLOY == 'true'
         run: |
           ssh -i ~/.ssh/deploy_key \
             -o StrictHostKeyChecking=accept-new \
             -o ConnectTimeout=30 \
             "${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}" \
-            "bash -s -- /mnt/user/appdata/starbunk main ${SHORT_SHA}" \
+            "bash -s -- ${{ vars.PROD_DOCKER_COMPOSE_DIR }} main ${SHORT_SHA} ${{ vars.PROD_DOCKER_COMPOSE_DIR }}/docker-compose.yml.incoming" \
             < scripts/deployment/deploy.sh
 
       - name: Health check
+        if: env.SHOULD_DEPLOY == 'true'
         run: |
           ssh -i ~/.ssh/deploy_key \
             -o StrictHostKeyChecking=accept-new \
             -o ConnectTimeout=30 \
             "${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}" \
-            'bash -s -- /mnt/user/appdata/starbunk' \
+            "bash -s -- ${{ vars.PROD_DOCKER_COMPOSE_DIR }}" \
             < scripts/deployment/health-check.sh
 
       - name: Notify — deploy succeeded
-        if: success() && vars.DISCORD_NOTIFY_USER_ID != ''
+        if: success() && env.SHOULD_DEPLOY == 'true' && vars.DISCORD_NOTIFY_USER_ID != ''
         uses: ./.github/actions/discord-dm
         with:
           bot_token: ${{ secrets.DISCORD_NOTIFY_TOKEN }}
@@ -102,7 +173,7 @@ jobs:
             — [View deployment](${{ github.server_url }}/${{ github.repository }}/deployments/activity_log?environment=production)
 
       - name: Notify — deploy failed
-        if: failure() && vars.DISCORD_NOTIFY_USER_ID != ''
+        if: failure() && env.SHOULD_DEPLOY == 'true' && vars.DISCORD_NOTIFY_USER_ID != ''
         uses: ./.github/actions/discord-dm
         with:
           bot_token: ${{ secrets.DISCORD_NOTIFY_TOKEN }}

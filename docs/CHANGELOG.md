@@ -1,3 +1,39 @@
+## [1.46.3](https://github.com/andrewgari/starbunk-js/compare/v1.46.2...v1.46.3) (2026-04-28)
+
+### Bug Fixes
+
+* **covabot:** fix personality loading — path mismatch, flat file support, startup warnings ([#692](https://github.com/andrewgari/starbunk-js/issues/692)) ([01be08d](https://github.com/andrewgari/starbunk-js/commit/01be08de42296e51399cb83e4cf639bcf9eb76cb))
+
+## [1.46.2](https://github.com/andrewgari/starbunk-js/compare/v1.46.1...v1.46.2) (2026-04-27)
+
+### Bug Fixes
+
+* **deploy:** remove stale containers before bringing up new ones ([#690](https://github.com/andrewgari/starbunk-js/issues/690)) ([142c231](https://github.com/andrewgari/starbunk-js/commit/142c2311fe8f009be4f29a6e2d8b35b4085bfb32))
+
+## [1.46.1](https://github.com/andrewgari/starbunk-js/compare/v1.46.0...v1.46.1) (2026-04-27)
+
+### Bug Fixes
+
+* **docker:** pin compose project name to starbunk ([#687](https://github.com/andrewgari/starbunk-js/issues/687)) ([8fbaed9](https://github.com/andrewgari/starbunk-js/commit/8fbaed99ac9aa05f51210917e2c39b45be2943f9))
+
+## [1.46.0](https://github.com/andrewgari/starbunk-js/compare/v1.45.1...v1.46.0) (2026-04-27)
+
+### Features
+
+* **ci:** use repo docker-compose.yml and configurable compose dir ([#686](https://github.com/andrewgari/starbunk-js/issues/686)) ([c0ff1ed](https://github.com/andrewgari/starbunk-js/commit/c0ff1ed116f2f92c1bc115522067ec8492aaf23e))
+
+## [1.45.1](https://github.com/andrewgari/starbunk-js/compare/v1.45.0...v1.45.1) (2026-04-27)
+
+### Bug Fixes
+
+* **ci:** rename Tailscale OAuth secrets to TAILSCALE_OAUTH_CLIENT_ID/SECRET ([#685](https://github.com/andrewgari/starbunk-js/issues/685)) ([06e2bcc](https://github.com/andrewgari/starbunk-js/commit/06e2bcc0d82adb169fa3b822754e71c5bcab16d4))
+
+## [1.45.0](https://github.com/andrewgari/starbunk-js/compare/v1.44.0...v1.45.0) (2026-04-27)
+
+### Features
+
+* **ci:** switch to Tailscale OAuth + Tailscale SSH for deployment ([#684](https://github.com/andrewgari/starbunk-js/issues/684)) ([2e469bf](https://github.com/andrewgari/starbunk-js/commit/2e469bfdac290fee808c2f68c4c592e8fbd76ee2))
+
 ## [1.44.0](https://github.com/andrewgari/starbunk-js/compare/v1.43.0...v1.44.0) (2026-04-27)
 
 ### Features
@@ -144,7 +180,7 @@
 
 ### Features
 
-* **infra:** full production stack — Redis, Qdrant, Portainer webhook deploy ([#653](https://github.com/andrewgari/starbunk-js/issues/653)) ([5bf4510](https://github.com/andrewgari/starbunk-js/commit/5bf4510c926d070e8bfe0a6c552764c422d2fd06))
+* **infra:** full production stack — Redis, Portainer webhook deploy ([#653](https://github.com/andrewgari/starbunk-js/issues/653)) ([5bf4510](https://github.com/andrewgari/starbunk-js/commit/5bf4510c926d070e8bfe0a6c552764c422d2fd06))
 
 ## [1.33.5](https://github.com/andrewgari/starbunk-js/compare/v1.33.4...v1.33.5) (2026-04-17)
 

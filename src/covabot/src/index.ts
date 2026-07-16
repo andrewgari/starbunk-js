@@ -17,6 +17,7 @@ import { runSmokeMode } from '@starbunk/shared/health/smoke-mode';
 import { initializeHealthServer } from '@starbunk/shared/health/health-server-init';
 import { setApplicationHealth } from '@starbunk/shared/observability/health-server';
 import { shutdownObservability } from '@starbunk/shared/observability/shutdown';
+import { getMetricsService } from '@starbunk/shared/observability/metrics-service';
 import { CovaBot, CovaBotConfig } from './cova-bot';
 import { registerDependencyHealthChecks } from '@starbunk/shared/health/dependency-health';
 import { registerConfigHealthCheck } from '@starbunk/shared/health/config-health';
@@ -92,6 +93,10 @@ async function main(): Promise<void> {
     cloudLlmDefaultModel: process.env.CLOUD_LLM_DEFAULT_MODEL,
   };
 
+  // Initialize MetricsService with the correct service name BEFORE anything calls
+  // getMetricsService() without a name (e.g. health server, covabot-metrics module).
+  getMetricsService('covabot');
+
   // Initialize and start the bot
   const bot = CovaBot.getInstance(botConfig);
 
@@ -109,7 +114,7 @@ async function main(): Promise<void> {
   // Register config validation health check
   registerConfigHealthCheck(['DISCORD_TOKEN'], 'covabot');
 
-  // Register dependency health checks for Postgres, Redis, Qdrant if configured
+  // Register dependency health checks for Postgres and Redis if configured
   const postgresHost = process.env.POSTGRES_HOST;
   if (postgresHost) {
     registerDependencyHealthChecks({
@@ -121,7 +126,6 @@ async function main(): Promise<void> {
         password: process.env.POSTGRES_PASSWORD || '',
       },
       redisUrl: process.env.REDIS_URL,
-      qdrantUrl: process.env.QDRANT_URL,
     });
   }
 

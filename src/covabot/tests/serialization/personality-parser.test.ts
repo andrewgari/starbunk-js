@@ -3,7 +3,6 @@ import * as fs from 'fs';
 import * as path from 'path';
 import {
   parsePersonalityFile,
-  loadPersonalitiesFromDirectory,
   loadPersonalityFromDirectory,
 } from '../../src/serialization/personality-parser';
 
@@ -30,15 +29,9 @@ describe('PersonalityParser', () => {
 profile:
   id: "test-bot"
   display_name: "Test Bot"
-  avatar_url: "https://example.com/avatar.png"
   name_aliases:
     - "test"
     - "testbot"
-
-  identity:
-    type: static
-    botName: "Test Bot"
-    avatarUrl: "https://example.com/avatar.png"
 
   personality:
     system_prompt: "You are a test bot."
@@ -98,9 +91,6 @@ profile:
 profile:
   id: "test-bot"
   display_name: "Test Bot"
-  identity:
-    type: static
-    botName: "Test Bot"
 `;
       const filePath = path.join(testDir, 'incomplete.yml');
       fs.writeFileSync(filePath, yamlContent);
@@ -113,10 +103,6 @@ profile:
 profile:
   id: "minimal-bot"
   display_name: "Minimal Bot"
-
-  identity:
-    type: static
-    botName: "Minimal Bot"
 
   personality:
     system_prompt: "You are minimal."
@@ -135,28 +121,6 @@ profile:
       expect(profile.ignoreBots).toBe(true);
     });
 
-    it('should parse mimic identity type', () => {
-      const yamlContent = `
-profile:
-  id: "mimic-bot"
-  display_name: "Mimic Bot"
-
-  identity:
-    type: mimic
-    as_member: "123456789012345678"
-
-  personality:
-    system_prompt: "You mimic a user."
-`;
-      const filePath = path.join(testDir, 'mimic.yml');
-      fs.writeFileSync(filePath, yamlContent);
-
-      const profile = parsePersonalityFile(filePath);
-
-      expect(profile.identity.type).toBe('mimic');
-      expect((profile.identity as { as_member: string }).as_member).toBe('123456789012345678');
-    });
-
     it('should parse name_aliases', () => {
       const yamlContent = `
 profile:
@@ -165,10 +129,6 @@ profile:
   name_aliases:
     - "alias"
     - "aliasbot"
-
-  identity:
-    type: static
-    botName: "Alias Bot"
 
   personality:
     system_prompt: "You respond to aliases."
@@ -179,121 +139,6 @@ profile:
       const profile = parsePersonalityFile(filePath);
 
       expect(profile.nameAliases).toEqual(['alias', 'aliasbot']);
-    });
-  });
-
-  describe('loadPersonalitiesFromDirectory', () => {
-    const mkPersonalityDir = (name: string, yaml: string) => {
-      const dir = path.join(testDir, name);
-      fs.mkdirSync(dir, { recursive: true });
-      fs.writeFileSync(path.join(dir, 'profile.yml'), yaml);
-      return dir;
-    };
-
-    it('should load all personality subdirectories', () => {
-      const yaml1 = `
-profile:
-  id: "bot-1"
-  display_name: "Bot 1"
-  identity:
-    type: static
-    botName: "Bot 1"
-  personality:
-    system_prompt: "Bot 1"
-`;
-      const yaml2 = `
-profile:
-  id: "bot-2"
-  display_name: "Bot 2"
-  identity:
-    type: static
-    botName: "Bot 2"
-  personality:
-    system_prompt: "Bot 2"
-`;
-      mkPersonalityDir('bot-1', yaml1);
-      mkPersonalityDir('bot-2', yaml2);
-
-      const profiles = loadPersonalitiesFromDirectory(testDir);
-
-      expect(profiles).toHaveLength(2);
-      expect(profiles.map(p => p.id)).toContain('bot-1');
-      expect(profiles.map(p => p.id)).toContain('bot-2');
-    });
-
-    it('should create directory if it does not exist', () => {
-      const newDir = path.join(testDir, 'new-dir');
-      const profiles = loadPersonalitiesFromDirectory(newDir);
-
-      expect(profiles).toHaveLength(0);
-      expect(fs.existsSync(newDir)).toBe(true);
-    });
-
-    it('should skip subdirectories with invalid profile.yml and continue loading', () => {
-      const validYaml = `
-profile:
-  id: "valid-bot"
-  display_name: "Valid Bot"
-  identity:
-    type: static
-    botName: "Valid Bot"
-  personality:
-    system_prompt: "Valid"
-`;
-      mkPersonalityDir('valid-bot', validYaml);
-
-      const invalidDir = path.join(testDir, 'invalid-bot');
-      fs.mkdirSync(invalidDir, { recursive: true });
-      fs.writeFileSync(path.join(invalidDir, 'profile.yml'), 'invalid yaml content [[[');
-
-      const profiles = loadPersonalitiesFromDirectory(testDir);
-
-      expect(profiles).toHaveLength(1);
-      expect(profiles[0].id).toBe('valid-bot');
-    });
-
-    it('should ignore files at the top level (only processes subdirectories)', () => {
-      const validYaml = `
-profile:
-  id: "test-bot"
-  display_name: "Test Bot"
-  identity:
-    type: static
-    botName: "Test Bot"
-  personality:
-    system_prompt: "Test"
-`;
-      mkPersonalityDir('test-bot', validYaml);
-      // These top-level files should be ignored
-      fs.writeFileSync(path.join(testDir, 'readme.txt'), 'Not a personality dir');
-      fs.writeFileSync(path.join(testDir, 'stray.yml'), validYaml);
-
-      const profiles = loadPersonalitiesFromDirectory(testDir);
-
-      expect(profiles).toHaveLength(1);
-      expect(profiles[0].id).toBe('test-bot');
-    });
-
-    it('should skip subdirectories without a profile.yml', () => {
-      const validYaml = `
-profile:
-  id: "test-bot"
-  display_name: "Test Bot"
-  identity:
-    type: static
-    botName: "Test Bot"
-  personality:
-    system_prompt: "Test"
-`;
-      mkPersonalityDir('test-bot', validYaml);
-
-      // subdir without profile.yml
-      fs.mkdirSync(path.join(testDir, 'no-profile'), { recursive: true });
-      fs.writeFileSync(path.join(testDir, 'no-profile', 'core.md'), 'Just markdown, no profile');
-
-      const profiles = loadPersonalitiesFromDirectory(testDir);
-
-      expect(profiles).toHaveLength(1);
     });
   });
 
@@ -308,7 +153,12 @@ profile:
       fs.writeFileSync(path.join(dir, 'profile.yml'), yaml);
       if (markdownFiles) {
         for (const [file, content] of Object.entries(markdownFiles)) {
-          fs.writeFileSync(path.join(dir, file), content);
+          const filePath = path.join(dir, file);
+          const parentDir = path.dirname(filePath);
+          if (!fs.existsSync(parentDir)) {
+            fs.mkdirSync(parentDir, { recursive: true });
+          }
+          fs.writeFileSync(filePath, content);
         }
       }
       return dir;
@@ -319,9 +169,6 @@ profile:
 profile:
   id: "yaml-bot"
   display_name: "YAML Bot"
-  identity:
-    type: static
-    botName: "YAML Bot"
   personality:
     system_prompt: "Defined in YAML."
 `;
@@ -336,9 +183,6 @@ profile:
 profile:
   id: "md-bot"
   display_name: "Markdown Bot"
-  identity:
-    type: static
-    botName: "Markdown Bot"
   personality:
     system_prompt: "See core.md"
 `;
@@ -358,9 +202,6 @@ profile:
 profile:
   id: "memory-bot"
   display_name: "Memory Bot"
-  identity:
-    type: static
-    botName: "Memory Bot"
   personality:
     system_prompt: "Test"
   memory:
@@ -370,6 +211,59 @@ profile:
       const profile = loadPersonalityFromDirectory(dir);
 
       expect(profile.memory.channelWindow).toBe(20);
+    });
+
+    it('should parse user relationships from relationships.md even with usernames/labels in headings', () => {
+      const yaml = `
+profile:
+  id: "relationship-bot"
+  display_name: "Relationship Bot"
+  personality:
+    system_prompt: "Test"
+`;
+      const dir = mkPersonalityDir('relationship-bot', yaml, {
+        'relationships.md': `
+## 123456789012345678 - andrewgari
+You speak like a Knight to their King.
+
+## 876543210987654321 (Alice)
+You are extremely friendly to her.
+`,
+      });
+      const profile = loadPersonalityFromDirectory(dir);
+
+      expect(profile.personality.userRelationships).toEqual({
+        '123456789012345678': 'You speak like a Knight to their King.',
+        '876543210987654321': 'You are extremely friendly to her.',
+      });
+    });
+
+    it('should parse user voices from directory and profile.yml', () => {
+      const yaml = `
+profile:
+  id: "voices-bot"
+  display_name: "Voices Bot"
+  personality:
+    system_prompt: "Test"
+    user_voices:
+      "111111111111111111": "chef"
+      "222222222222222222": "knight"
+`;
+      const dir = mkPersonalityDir('voices-bot', yaml, {
+        'voices/chef.md': 'Speak like a chef.',
+        'voices/knight.md': 'Speak like a knight to their king.',
+      });
+      const profile = loadPersonalityFromDirectory(dir);
+
+      expect(profile.personality.userVoices).toEqual({
+        '111111111111111111': 'chef',
+        '222222222222222222': 'knight',
+      });
+
+      expect(profile.personality.voices).toEqual({
+        chef: 'Speak like a chef.',
+        knight: 'Speak like a knight to their king.',
+      });
     });
   });
 });

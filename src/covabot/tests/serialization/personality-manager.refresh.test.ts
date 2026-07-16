@@ -3,27 +3,18 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { PersonalityManager } from '../../src/serialization/personality-manager';
 
-const validYaml = (id: string, name: string) => `
+const validYaml = (name: string) => `
 profile:
-  id: "${id}"
+  id: "test-bot"
   display_name: "${name}"
-  identity:
-    type: static
-    botName: "${name}"
   personality:
     system_prompt: "Hello"
 `;
 
-/** Create a personality subdirectory containing profile.yml */
-function mkPersonality(testDir: string, id: string, name: string) {
-  const dir = path.join(testDir, id);
-  fs.mkdirSync(dir, { recursive: true });
-  fs.writeFileSync(path.join(dir, 'profile.yml'), validYaml(id, name));
-}
-
-/** Remove a personality subdirectory */
-function rmPersonality(testDir: string, id: string) {
-  fs.rmSync(path.join(testDir, id), { recursive: true, force: true });
+/** Create or update the profile.yml in the directory */
+function writeProfile(testDir: string, name: string) {
+  if (!fs.existsSync(testDir)) fs.mkdirSync(testDir, { recursive: true });
+  fs.writeFileSync(path.join(testDir, 'profile.yml'), validYaml(name));
 }
 
 describe('PersonalityManager refresh & watch', () => {
@@ -48,50 +39,41 @@ describe('PersonalityManager refresh & watch', () => {
     vi.useRealTimers();
   });
 
-  it('keeps previous state if directory read fails during refresh (rollback)', () => {
-    mkPersonality(testDir, 'a', 'A');
+  it('keeps previous state if file read fails during refresh (rollback)', () => {
+    writeProfile(testDir, 'A');
     const mgr = new PersonalityManager(testDir);
-    expect(mgr.getPersonalityCount()).toBe(1);
+    expect(mgr.getPersonality()?.displayName).toBe('A');
 
-    // Turn the directory into a file to force readdirSync to throw
+    // Turn the directory into a file to force read failure
     fs.rmSync(testDir, { recursive: true, force: true });
     fs.writeFileSync(testDir, 'not-a-directory');
 
-    mgr.refreshPersonalities();
-    expect(mgr.getPersonalityCount()).toBe(1); // unchanged
-    expect(mgr.getActivePersonality()).toBeNull();
+    mgr.refreshPersonality();
+    expect(mgr.getPersonality()?.displayName).toBe('A'); // unchanged
   });
 
-  it('restores previous active personality after refresh when still present; clears when removed', () => {
-    mkPersonality(testDir, 'x', 'X');
-    mkPersonality(testDir, 'y', 'Y');
+  it('updates personality after refresh', () => {
+    writeProfile(testDir, 'X');
     const mgr = new PersonalityManager(testDir);
-    const x = mgr.getPersonalityById('x')!;
-    mgr.activatePersonality(x);
-    expect(mgr.getActivePersonality()?.id).toBe('x');
+    expect(mgr.getPersonality()?.displayName).toBe('X');
 
-    // Add new personality and refresh (x still exists)
-    mkPersonality(testDir, 'z', 'Z');
-    mgr.refreshPersonalities();
-    expect(mgr.getPersonalityCount()).toBe(3);
-    expect(mgr.getActivePersonality()?.id).toBe('x');
-
-    // Remove x and refresh -> active becomes null
-    rmPersonality(testDir, 'x');
-    mgr.refreshPersonalities();
-    expect(mgr.getPersonalityCount()).toBe(2);
-    expect(mgr.getActivePersonality()).toBeNull();
+    // Update personality and refresh
+    writeProfile(testDir, 'Z');
+    mgr.refreshPersonality();
+    expect(mgr.getPersonality()?.displayName).toBe('Z');
   });
 
   it('fs.watch triggers debounced refresh and dispose does not throw', async () => {
+    // start with a profile so it initializes cleanly
+    writeProfile(testDir, 'Old');
     const mgr = new PersonalityManager(testDir);
-    expect(mgr.getPersonalityCount()).toBe(0);
+    expect(mgr.getPersonality()?.displayName).toBe('Old');
 
-    // Create a new personality subdir and rely on real fs.watch debounce (~500ms)
-    mkPersonality(testDir, 'n', 'N');
+    // Update the profile to trigger fs.watch
+    writeProfile(testDir, 'New');
     await new Promise(r => setTimeout(r, 700));
 
-    expect(mgr.getPersonalityCount()).toBe(1);
+    expect(mgr.getPersonality()?.displayName).toBe('New');
 
     expect(() => mgr.dispose()).not.toThrow();
   });

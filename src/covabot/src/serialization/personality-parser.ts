@@ -3,14 +3,7 @@ import * as yaml from 'js-yaml';
 import { logLayer } from '@starbunk/shared/observability/log-layer';
 import type { CovaProfile } from '@/models/memory-types';
 import { VERBOSE_LOGGING } from '@/utils/verbose-mode';
-import {
-  readDirectory,
-  directoryExists,
-  isDirectory,
-  fileExists,
-  createDirectory,
-  readFileUtf8,
-} from './file-reader';
+import { fileExists, readFileUtf8, directoryExists, readDirectory } from './file-reader';
 import { validateOrThrow } from './personality-validator';
 import { mapToCovaProfile } from './personality-mapper';
 import { deepFreeze } from './deep-freeze';
@@ -93,6 +86,7 @@ export function parsePersonalityFile(filePath: string): CovaProfile {
  */
 const PERSONALITY_SECTIONS: Array<{ file: string; heading: string }> = [
   { file: 'core.md', heading: '' },
+  { file: 'voice.md', heading: '## Voice Direction' },
   { file: 'speech.md', heading: '## Speech Style' },
   { file: 'likes.md', heading: '## Things I Like' },
   { file: 'dislikes.md', heading: '## Things I Dislike' },
@@ -140,6 +134,90 @@ function loadMarkdownSystemPrompt(dirPath: string): string {
 }
 
 /**
+ * Read relationships.md and parse it into a Record<string, string>.
+ * Format requires Discord User IDs as Markdown headings:
+ * ## 123456789012345678
+ * Relationship instruction here...
+ */
+function loadMarkdownRelationships(dirPath: string): Record<string, string> {
+  const filePath = path.join(dirPath, 'relationships.md');
+  if (!fileExists(filePath)) {
+    return {};
+  }
+
+  const content = readFileUtf8(filePath);
+  const relationships: Record<string, string> = {};
+
+  // Split content by headings (1-6 '#' characters at the start of a line)
+  const blocks = content.split(/^(?:#{1,6})\s+/m);
+
+  // The first block is content before the first heading, so we skip it.
+  for (let i = 1; i < blocks.length; i++) {
+    const block = blocks[i];
+    const lines = block.split(/\r?\n/);
+    const heading = lines[0]?.trim() || '';
+    const body = lines.slice(1).join('\n').trim();
+
+    if (!heading) continue;
+
+    // 1. Try to find the Discord ID (17-21 digits) in the heading first
+    const headingIdMatch = heading.match(/\b(\d{17,21})\b/);
+    let userId: string | null = headingIdMatch ? headingIdMatch[1] : null;
+
+    // 2. If not in heading, look for User ID in the body
+    if (!userId) {
+      const bodyIdMatch =
+        body.match(/(?:user[-_\s]*id|id)[:*`\s-]*(\d{17,21})/i) || body.match(/\b(\d{17,21})\b/);
+      if (bodyIdMatch) {
+        userId = bodyIdMatch[1];
+      }
+    }
+
+    if (userId) {
+      relationships[userId] = body;
+    }
+  }
+
+  if (VERBOSE_LOGGING && Object.keys(relationships).length > 0) {
+    logger
+      .withMetadata({ dir: path.basename(dirPath), count: Object.keys(relationships).length })
+      .info('Markdown relationships loaded');
+  }
+
+  return relationships;
+}
+
+function loadMarkdownVoices(dirPath: string): Record<string, string> {
+  const voicesDir = path.join(dirPath, 'voices');
+  if (!directoryExists(voicesDir)) {
+    return {};
+  }
+
+  const voices: Record<string, string> = {};
+  const entries = readDirectory(voicesDir);
+
+  for (const entry of entries) {
+    const entryPath = path.join(voicesDir, entry);
+    if (fileExists(entryPath) && path.extname(entry).toLowerCase() === '.md') {
+      const voiceKey = path.basename(entry, '.md').toLowerCase();
+      voices[voiceKey] = readFileUtf8(entryPath).trim();
+    }
+  }
+
+  if (VERBOSE_LOGGING && Object.keys(voices).length > 0) {
+    logger
+      .withMetadata({
+        dir: path.basename(dirPath),
+        count: Object.keys(voices).length,
+        voiceKeys: Object.keys(voices),
+      })
+      .info('Markdown voices loaded');
+  }
+
+  return voices;
+}
+
+/**
  * Load a single personality from a directory containing profile.yml and optional markdown files.
  * Markdown files take precedence over the system_prompt field in profile.yml.
  */
@@ -148,81 +226,42 @@ export function loadPersonalityFromDirectory(dirPath: string): CovaProfile {
   const baseProfile = parsePersonalityFile(profileFilePath);
 
   const markdownPrompt = loadMarkdownSystemPrompt(dirPath);
-  if (!markdownPrompt) {
-    return baseProfile;
-  }
+  const markdownRelationships = loadMarkdownRelationships(dirPath);
+  const markdownVoices = loadMarkdownVoices(dirPath);
 
-  // Overlay the markdown-assembled system prompt onto the frozen base profile
-  return deepFreeze({
+  const hasMarkdownPrompt = markdownPrompt.length > 0;
+
+  const mergedProfile = {
     ...baseProfile,
     personality: {
       ...baseProfile.personality,
-      systemPrompt: markdownPrompt,
+      systemPrompt: hasMarkdownPrompt ? markdownPrompt : baseProfile.personality.systemPrompt,
+      userRelationships: {
+        ...baseProfile.personality.userRelationships,
+        ...markdownRelationships,
+      },
+      voices: {
+        ...baseProfile.personality.voices,
+        ...markdownVoices,
+      },
     },
-  }) as unknown as CovaProfile;
-}
+  };
 
-/**
- * Load all personality profiles from a directory.
- *
- * Convention: each personality is a subdirectory containing a `profile.yml`
- * and optional markdown files.
- * Example:
- *   personalities/
- *     cova/
- *       profile.yml
- *       core.md
- *       likes.md
- *       ...
- *
- * The subdirectory name is the deployer's identifier — the display name and
- * character details are defined inside profile.yml and the markdown files.
- */
-export function loadPersonalitiesFromDirectory(dirPath: string): CovaProfile[] {
-  if (!directoryExists(dirPath)) {
-    try {
-      createDirectory(dirPath);
-      logger.withMetadata({ path: dirPath }).info('Created personalities directory');
-    } catch (_err) {
-      throw new PersonalityParserError(`Unable to create directory: ${dirPath}`);
-    }
-    return [];
-  }
-
-  let entries: string[] = [];
-  try {
-    entries = readDirectory(dirPath);
-  } catch (_err) {
-    throw new PersonalityParserError(`Unable to read directory: ${dirPath}`);
-  }
-
-  const profiles: CovaProfile[] = [];
-
-  for (const entry of entries) {
-    const entryPath = path.join(dirPath, entry);
-
-    // Each personality lives in its own subdirectory with a profile.yml inside
-    if (!isDirectory(entryPath)) continue;
-
-    const profileFilePath = path.join(entryPath, 'profile.yml');
-    if (!fileExists(profileFilePath)) continue;
-
-    try {
-      const profile = loadPersonalityFromDirectory(entryPath);
-      profiles.push(profile);
-      logger.withMetadata({ dir: entry, profileId: profile.id }).info('Loaded personality');
-    } catch (error) {
+  // Perform startup validation/warnings on missing mapped voice strategies
+  for (const [userId, voiceKey] of Object.entries(mergedProfile.personality.userVoices)) {
+    if (!mergedProfile.personality.voices[voiceKey.toLowerCase()]) {
       logger
-        .withError(error)
-        .withMetadata({ dir: entry, path: profileFilePath })
-        .error('Failed to load personality');
+        .withMetadata({ userId, voiceKey })
+        .warn(
+          `User voice mapping references voice key "${voiceKey}" which was not found in voices/ directory`,
+        );
     }
   }
 
-  return profiles;
+  return deepFreeze(mergedProfile) as unknown as CovaProfile;
 }
 
-export function getDefaultPersonalitiesPath(): string {
+export function getDefaultPersonalityPath(): string {
   if (process.env.COVABOT_CONFIG_DIR) {
     return process.env.COVABOT_CONFIG_DIR;
   }

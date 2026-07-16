@@ -26,8 +26,8 @@ import { InterestRepository } from '@/repositories/interest-repository';
 import { PersonalityRepository } from '@/repositories/personality-repository';
 import { CovaProfile } from '@/models/memory-types';
 import {
-  loadPersonalitiesFromDirectory,
-  getDefaultPersonalitiesPath,
+  loadPersonalityFromDirectory,
+  getDefaultPersonalityPath,
 } from '@/serialization/personality-parser';
 import { EmbeddingManager } from '@/services/llm';
 import { VERBOSE_LOGGING } from '@/utils/verbose-mode';
@@ -62,7 +62,7 @@ export class CovaBot {
 
   private config: CovaBotConfig;
   private client: Client | null = null;
-  private profiles: Map<string, CovaProfile> = new Map();
+  private profile: CovaProfile | null = null;
 
   // Services
   private pgService: PostgresService | null = null;
@@ -94,12 +94,12 @@ export class CovaBot {
 
     try {
       await this.initializeDatabase();
-      await this.loadProfiles();
+      await this.loadProfile();
       await this.initializeServices();
       await this.initializeDiscord();
 
       logger
-        .withMetadata({ profiles_loaded: this.profiles.size })
+        .withMetadata({ profile_loaded: !!this.profile })
         .info('CovaBot v2 started successfully');
     } catch (error) {
       logger.withError(error).error('Failed to start CovaBot');
@@ -127,12 +127,12 @@ export class CovaBot {
     logger.info('CovaBot v2 stopped');
   }
 
-  getProfile(profileId: string): CovaProfile | undefined {
-    return this.profiles.get(profileId);
+  getProfile(): CovaProfile | undefined {
+    return this.profile || undefined;
   }
 
   getAllProfiles(): CovaProfile[] {
-    return Array.from(this.profiles.values());
+    return this.profile ? [this.profile] : [];
   }
 
   getServices(): {
@@ -161,60 +161,62 @@ export class CovaBot {
     this.pgService = await initializeDatabase();
   }
 
-  private async loadProfiles(): Promise<void> {
-    const personalitiesPath = this.config.personalitiesPath || getDefaultPersonalitiesPath();
-    const profiles = loadPersonalitiesFromDirectory(personalitiesPath);
-    this.profiles = new Map(profiles.map(profile => [profile.id, profile]));
-
-    logger
-      .withMetadata({ count: this.profiles.size, path: personalitiesPath })
-      .info('Profiles loaded');
-
-    // Always audit personality data completeness — warns on startup if data is missing
-    for (const profile of this.profiles.values()) {
-      const issues: string[] = [];
-
-      if (
-        !profile.personality.systemPrompt ||
-        profile.personality.systemPrompt.trim().length < 50
-      ) {
-        issues.push(
-          `system_prompt too short or missing (${profile.personality.systemPrompt.length} chars)`,
+  private async loadProfile(): Promise<void> {
+    const personalityPath = this.config.personalitiesPath || getDefaultPersonalityPath();
+    try {
+      this.profile = loadPersonalityFromDirectory(personalityPath);
+      logger.withMetadata({ path: personalityPath }).info('Profile loaded');
+    } catch (error) {
+      logger
+        .withError(error)
+        .withMetadata({ path: personalityPath })
+        .warn(
+          'Failed to load personality profile. CovaBot will not respond to any messages. ' +
+            'Ensure profile.yml and configuration files are valid.',
         );
-      }
-      if (profile.personality.traits.length === 0) {
-        issues.push('no traits defined');
-      }
-      if (profile.personality.topicAffinities.length === 0) {
-        issues.push('no topic_affinities defined');
-      }
-      if (profile.nameAliases.length === 0) {
-        issues.push('no name_aliases — bot will never detect name mentions');
-      }
+      return;
+    }
 
-      if (issues.length > 0) {
-        logger
-          .withMetadata({
-            profile_id: profile.id,
-            display_name: profile.displayName,
-            issues,
-          })
-          .warn('Personality data incomplete');
-      } else if (VERBOSE_LOGGING) {
-        logger
-          .withMetadata({
-            profile_id: profile.id,
-            display_name: profile.displayName,
-            system_prompt_length: profile.personality.systemPrompt.length,
-            traits: profile.personality.traits,
-            topic_affinities: profile.personality.topicAffinities,
-            background_facts_count: profile.personality.backgroundFacts.length,
-            name_aliases: profile.nameAliases,
-            social_battery: profile.socialBattery,
-            llm_model: profile.llmConfig.model,
-          })
-          .info('Personality loaded OK');
-      }
+    const profile = this.profile;
+    const issues: string[] = [];
+
+    if (!profile.personality.systemPrompt || profile.personality.systemPrompt.trim().length < 50) {
+      issues.push(
+        `system_prompt too short or missing (${profile.personality.systemPrompt.length} chars)`,
+      );
+    }
+    if (profile.personality.traits.length === 0) {
+      issues.push('no traits defined');
+    }
+    if (profile.personality.topicAffinities.length === 0) {
+      issues.push('no topic_affinities defined');
+    }
+    if (profile.nameAliases.length === 0) {
+      issues.push('no name_aliases — bot will never detect name mentions');
+    }
+
+    if (issues.length > 0) {
+      logger
+        .withMetadata({
+          profile_id: profile.id,
+          display_name: profile.displayName,
+          issues,
+        })
+        .warn('Personality data incomplete');
+    } else if (VERBOSE_LOGGING) {
+      logger
+        .withMetadata({
+          profile_id: profile.id,
+          display_name: profile.displayName,
+          system_prompt_length: profile.personality.systemPrompt.length,
+          traits: profile.personality.traits,
+          topic_affinities: profile.personality.topicAffinities,
+          background_facts_count: profile.personality.backgroundFacts.length,
+          name_aliases: profile.nameAliases,
+          social_battery: profile.socialBattery,
+          llm_model: profile.llmConfig.model,
+        })
+        .info('Personality loaded OK');
     }
 
     if (VERBOSE_LOGGING) {
@@ -270,7 +272,7 @@ export class CovaBot {
     this.responseDecisionService = new ResponseDecisionService(this.socialBatteryService);
 
     this.messageHandler = new MessageHandler(
-      this.profiles,
+      this.profile,
       this.memoryService,
       this.responseDecisionService,
       this.llmService,

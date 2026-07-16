@@ -47,6 +47,15 @@ export function fileExists(filePath: string): boolean {
   }
 }
 
+/**
+ * Returns true if the path exists and the process can read it.
+ * Unlike fileExists/isDirectory, throws on permission errors so callers
+ * can surface them rather than silently skipping inaccessible entries.
+ */
+export function checkReadAccess(entryPath: string): void {
+  fs.accessSync(entryPath, fs.constants.R_OK | fs.constants.X_OK);
+}
+
 export function createDirectory(dirPath: string): void {
   fs.mkdirSync(dirPath, { recursive: true });
 }

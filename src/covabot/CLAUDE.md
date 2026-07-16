@@ -1,5 +1,7 @@
 # CovaBot - Development Instructions
 
+> **Releasing:** Any change to `src/covabot/src/` requires a changeset. Run `npm run cs` from the repo root, pick `@starbunk/covabot`, choose the bump level, write one line. See `wiki/raw/Versioning.md`.
+
 ## Goals & Purpose
 CovaBot acts as the AI personality for StarBunk, supplying context-aware, LLM-driven responses designed to mimic and interact with actual users. 
 
@@ -14,7 +16,7 @@ CovaBot acts as the AI personality for StarBunk, supplying context-aware, LLM-dr
 
 ## Dependencies & Architecture
 - **Primary Dependencies:** LLM APIs (Ollama primary, OpenAI fallback), Postgres (conversation memory + social battery).
-- Redis and Qdrant have been removed — social battery is stored in Postgres; interest matching uses keyword-based scoring.
+- Redis is optional — social battery is stored in Postgres; interest matching uses keyword-based scoring.
 - Scaled for LLM interactions. API calls should be heavily asynchronous and timeout-resistant.
 
 ## Edge Cases to Consider

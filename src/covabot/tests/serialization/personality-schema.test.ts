@@ -1,6 +1,5 @@
 import { describe, it, expect } from 'vitest';
 import {
-  identitySchema,
   speechPatternsSchema,
   personalitySchema,
   socialBatterySchema,
@@ -10,85 +9,6 @@ import {
 } from '../../src/serialization/personality-schema';
 
 describe('personality-schema', () => {
-  describe('identitySchema', () => {
-    it('should validate static identity with all fields', () => {
-      const result = identitySchema.safeParse({
-        type: 'static',
-        botName: 'Test Bot',
-        avatarUrl: 'https://example.com/avatar.png',
-      });
-
-      expect(result.success).toBe(true);
-    });
-
-    it('should validate static identity without optional avatarUrl', () => {
-      const result = identitySchema.safeParse({
-        type: 'static',
-        botName: 'Test Bot',
-      });
-
-      expect(result.success).toBe(true);
-    });
-
-    it('should reject static identity without botName', () => {
-      const result = identitySchema.safeParse({
-        type: 'static',
-      });
-
-      expect(result.success).toBe(false);
-    });
-
-    it('should validate mimic identity with valid Discord user ID', () => {
-      const result = identitySchema.safeParse({
-        type: 'mimic',
-        as_member: '123456789012345678',
-      });
-
-      expect(result.success).toBe(true);
-    });
-
-    it('should reject mimic identity with invalid user ID', () => {
-      const result = identitySchema.safeParse({
-        type: 'mimic',
-        as_member: 'not-a-valid-id',
-      });
-
-      expect(result.success).toBe(false);
-    });
-
-    it('should reject mimic identity with too short user ID', () => {
-      const result = identitySchema.safeParse({
-        type: 'mimic',
-        as_member: '12345678901234567', // 17 digits min
-      });
-
-      expect(result.success).toBe(true); // 17 is valid
-
-      const tooShort = identitySchema.safeParse({
-        type: 'mimic',
-        as_member: '1234567890123456', // 16 digits - too short
-      });
-
-      expect(tooShort.success).toBe(false);
-    });
-
-    it('should validate random identity', () => {
-      const result = identitySchema.safeParse({
-        type: 'random',
-      });
-
-      expect(result.success).toBe(true);
-    });
-
-    it('should reject unknown identity type', () => {
-      const result = identitySchema.safeParse({
-        type: 'unknown',
-      });
-
-      expect(result.success).toBe(false);
-    });
-  });
-
   describe('speechPatternsSchema', () => {
     it('should validate with all fields', () => {
       const result = speechPatternsSchema.safeParse({
@@ -235,7 +155,7 @@ describe('personality-schema', () => {
       expect(result.data).toEqual({
         model: 'gpt-4o-mini',
         temperature: 0.4,
-        max_tokens: 256,
+        max_tokens: 1024,
       });
     });
 
@@ -257,10 +177,6 @@ describe('personality-schema', () => {
     const validProfile = {
       id: 'test-bot',
       display_name: 'Test Bot',
-      identity: {
-        type: 'static',
-        botName: 'Test Bot',
-      },
       personality: {
         system_prompt: 'You are a test bot.',
       },
@@ -303,22 +219,6 @@ describe('personality-schema', () => {
       expect(result.data?.name_aliases).toEqual([]);
     });
 
-    it('should validate optional avatar_url as URL', () => {
-      const withAvatar = profileSchema.safeParse({
-        ...validProfile,
-        avatar_url: 'https://example.com/avatar.png',
-      });
-
-      expect(withAvatar.success).toBe(true);
-
-      const invalidAvatar = profileSchema.safeParse({
-        ...validProfile,
-        avatar_url: 'not-a-url',
-      });
-
-      expect(invalidAvatar.success).toBe(false);
-    });
-
     it('should apply defaults for social_battery, llm, and ignore_bots', () => {
       const result = profileSchema.safeParse(validProfile);
 
@@ -331,7 +231,7 @@ describe('personality-schema', () => {
       expect(result.data?.llm).toEqual({
         model: 'gpt-4o-mini',
         temperature: 0.4,
-        max_tokens: 256,
+        max_tokens: 1024,
       });
       expect(result.data?.ignore_bots).toBe(true);
     });
@@ -343,10 +243,6 @@ describe('personality-schema', () => {
         profile: {
           id: 'test-bot',
           display_name: 'Test Bot',
-          identity: {
-            type: 'static',
-            botName: 'Test Bot',
-          },
           personality: {
             system_prompt: 'You are a test bot.',
           },
@@ -367,7 +263,6 @@ describe('personality-schema', () => {
         profile: {
           id: 'test-bot',
           display_name: 'Test Bot',
-          identity: { type: 'random' },
           personality: { system_prompt: 'Test' },
         },
         extraKey: 'should be ignored',

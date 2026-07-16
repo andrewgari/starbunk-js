@@ -7,9 +7,9 @@
  * If all providers fail, the last error is re-thrown.
  *
  * Default priority (set at construction time):
- *   1. OllamaProvider    — local, free, private (primary)
- *   2. AnthropicProvider — Claude models
- *   3. GeminiProvider    — Google Gemini models
+ *   1. GeminiProvider    — Google Gemini models (primary)
+ *   2. OllamaProvider    — local, free, private
+ *   3. AnthropicProvider — Claude models
  *   4. OpenAIProvider    — OpenAI / legacy CLOUD_LLM_API_KEY (final fallback)
  *
  * Only providers whose isAvailable() returns true at construction time are
@@ -42,7 +42,17 @@ export class LlmProviderManager {
    * Initialize providers in priority order
    */
   private initializeProviders(config?: LlmProviderConfig): void {
-    // 1. Ollama (local, free, private)
+    // 1. Google Gemini (primary — capable models, generous default token limits)
+    // Trade-off: cloud API call (requires GEMINI_API_KEY, not private). Ollama was previously
+    // primary because it is local and free; Gemini is now preferred for its higher token ceiling
+    // which reduces truncation. Users without a Gemini key fall back to Ollama automatically.
+    const gemini = new GeminiProvider(config?.geminiApiKey, config?.geminiDefaultModel);
+    if (gemini.isAvailable()) {
+      this.providers.push(gemini);
+      logger.info('Gemini provider registered');
+    }
+
+    // 2. Ollama (local, free, private)
     const ollama = new OllamaProvider(
       config?.ollamaBaseUrl || config?.localLlmApiKey,
       config?.ollamaDefaultModel || config?.localLlmDefaultModel,
@@ -52,18 +62,11 @@ export class LlmProviderManager {
       logger.info('Ollama provider registered');
     }
 
-    // 2. Anthropic / Claude
+    // 3. Anthropic / Claude
     const anthropic = new AnthropicProvider(config?.anthropicApiKey, config?.anthropicDefaultModel);
     if (anthropic.isAvailable()) {
       this.providers.push(anthropic);
       logger.info('Anthropic provider registered');
-    }
-
-    // 3. Google Gemini
-    const gemini = new GeminiProvider(config?.geminiApiKey, config?.geminiDefaultModel);
-    if (gemini.isAvailable()) {
-      this.providers.push(gemini);
-      logger.info('Gemini provider registered');
     }
 
     // 4. OpenAI (legacy fallback via OPENAI_API_KEY or CLOUD_LLM_API_KEY)

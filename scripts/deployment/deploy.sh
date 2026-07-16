@@ -5,9 +5,10 @@ set -euo pipefail
 # Runs on Unraid server to pull latest images and restart services
 # Called by CircleCI deploy job via SSH
 
-COMPOSE_DIR="${1:-/mnt/user/appdata/starbunk}"
+COMPOSE_DIR="${1}"
 DEPLOY_TAG="${2:-main}"
 VERSION="${3:-unknown}"
+INCOMING_COMPOSE="${4:-}"  # optional path to a new docker-compose.yml to install after backup
 
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 echo "🚀 Starbunk Production Deployment"
@@ -24,6 +25,11 @@ if [ ! -d "$COMPOSE_DIR" ]; then
   exit 1
 fi
 
+if [ -z "$COMPOSE_DIR" ]; then
+  echo "❌ Error: COMPOSE_DIR argument is required"
+  exit 1
+fi
+
 cd "$COMPOSE_DIR"
 
 # Verify docker-compose.yml exists
@@ -34,9 +40,9 @@ fi
 
 # Check if docker-compose or docker compose is available
 if command -v docker-compose &> /dev/null; then
-  COMPOSE_CMD="docker-compose"
+  COMPOSE_CMD="docker-compose --env-file stack.env"
 elif docker compose version &> /dev/null; then
-  COMPOSE_CMD="docker compose"
+  COMPOSE_CMD="docker compose --env-file stack.env"
 else
   echo "❌ Error: Neither docker-compose nor docker compose is available"
   exit 1
@@ -64,15 +70,25 @@ backup_current_state() {
   BACKUP_DIR="${COMPOSE_DIR}/backups/deployment-$(date +%Y%m%d-%H%M%S)"
   mkdir -p "$BACKUP_DIR"
 
-  # Backup docker-compose.yml and .env
+  # Backup docker-compose.yml and stack.env
   cp docker-compose.yml "$BACKUP_DIR/" 2>/dev/null || true
-  cp .env "$BACKUP_DIR/" 2>/dev/null || true
+  cp stack.env "$BACKUP_DIR/" 2>/dev/null || true
 
   # Save current container list
   $COMPOSE_CMD ps --format json > "$BACKUP_DIR/containers.json" 2>/dev/null || true
 
   echo "✅ Backup saved to: $BACKUP_DIR"
   echo ""
+}
+
+# Install incoming docker-compose.yml (after backup, so backup reflects previous state)
+install_incoming_compose() {
+  if [ -n "$INCOMING_COMPOSE" ] && [ -f "$INCOMING_COMPOSE" ]; then
+    echo "📋 Installing new docker-compose.yml from: $INCOMING_COMPOSE"
+    mv "$INCOMING_COMPOSE" docker-compose.yml
+    echo "✅ docker-compose.yml updated"
+    echo ""
+  fi
 }
 
 # Pull latest images
@@ -96,9 +112,14 @@ pull_images() {
 restart_services() {
   echo "🔄 Restarting services with new images..."
 
-  # Use --force-recreate to ensure containers are rebuilt with new images
-  # Use --no-build to prevent local builds (we want to use pulled images)
-  $COMPOSE_CMD up -d --force-recreate --no-build
+  # Gracefully stop containers owned by this compose project
+  $COMPOSE_CMD down 2>/dev/null || true
+
+  # Force-remove any starbunk containers that weren't owned by this project
+  # (e.g. created under a different project name before the name: field was pinned)
+  docker ps -aq --filter "name=starbunk-" | xargs -r docker rm -f 2>/dev/null || true
+
+  $COMPOSE_CMD up -d --no-build
 
   EXIT_CODE=$?
   if [ $EXIT_CODE -ne 0 ]; then
@@ -155,6 +176,7 @@ check_restart_loops() {
 main() {
   get_current_digests
   backup_current_state
+  install_incoming_compose
   pull_images
   restart_services
   wait_for_stability
@@ -168,6 +190,9 @@ main() {
   echo "🏷️  Tag: ${DEPLOY_TAG}"
   echo "⏰ Completed: $(date)"
   echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+  
+  # Save the deployed version so future runs can skip if no updates
+  echo "${VERSION}" > .deployed_commit
 }
 
 # Execute deployment

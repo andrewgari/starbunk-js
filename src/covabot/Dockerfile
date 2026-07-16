@@ -2,7 +2,7 @@
 # Optimized 2-stage build with Alpine Linux (Docker & Podman compatible)
 
 # Stage 1: Builder - Build everything in one stage for speed
-FROM node:20-alpine AS builder
+FROM node:24-alpine AS builder
 
 WORKDIR /app
 
@@ -37,7 +37,7 @@ COPY src/covabot/vitest.config.ts src/covabot/tsconfig*.json ./src/covabot/
 RUN cd src/covabot && npm run build:docker
 
 # Stage 2: Runtime - Minimal production image
-FROM node:20-alpine AS runtime
+FROM node:24-alpine AS runtime
 
 # Build-time arguments for non-secret environment variables
 ARG DEBUG_MODE=false

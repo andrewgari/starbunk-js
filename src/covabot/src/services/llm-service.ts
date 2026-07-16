@@ -96,7 +96,7 @@ export class LlmService {
     // Add structured engagement context signals
     messages.push({
       role: 'system',
-      content: this.buildEngagementBlock(context.engagementContext),
+      content: `${this.buildEngagementBlock(context.engagementContext)}\n\nIMPORTANT: You are currently responding to ${userName}. Maintain your core personality and voice while applying any specific relationship rules or tone requirements defined for this user.`,
     });
 
     // Add the current message
@@ -115,6 +115,29 @@ export class LlmService {
       const responseContent = result.content;
       const tokensUsed = result.tokensUsed || 0;
       const duration = Date.now() - startTime;
+
+      // A truncated response means the model was cut off mid-sentence — suppress it
+      // rather than sending an incomplete message to Discord.
+      const wasTruncated = result.finishReason === 'max_tokens' || result.finishReason === 'length';
+      if (wasTruncated) {
+        logger
+          .withMetadata({
+            profile_id: profile.id,
+            model: result.model,
+            provider: result.provider,
+            tokens_used: tokensUsed,
+            duration_ms: duration,
+            finish_reason: result.finishReason,
+          })
+          .warn('LLM response truncated at token limit — suppressing to avoid mid-sentence cutoff');
+        return {
+          content: '',
+          shouldIgnore: true,
+          tokensUsed,
+          model: result.model,
+          provider: result.provider,
+        };
+      }
 
       // Check for ignore marker
       const shouldIgnore = responseContent.includes(IGNORE_CONVERSATION_MARKER);
@@ -228,9 +251,19 @@ export class LlmService {
       parts.push(`\n${context.traitModifiers}`);
     }
 
+    // Relationship modifiers (tone and mood shifts based on specific people)
+    if (context.userRelationshipsModifier) {
+      parts.push(`\n${context.userRelationshipsModifier}`);
+    }
+
+    // Voice modifiers (speech patterns and custom voices when addressing specific people)
+    if (context.userVoiceModifier) {
+      parts.push(`\n${context.userVoiceModifier}`);
+    }
+
     // Engagement guidance — full behavioral description replaces single-line IGNORE instruction
     parts.push(
-      `\nHow you decide whether to respond:\n\nYou are in a group Discord chat. You participate with natural, human conversational instincts — not on every message, not randomly, but when you genuinely have something to contribute.\n\nRespond when:\n- Someone addresses you directly\n- The conversation touches something you genuinely care about and you have a real reaction, insight, or take to add — not just an excuse to mention your interests\n- There is a natural opening that fits your personality\n\nRespond with exactly "${IGNORE_CONVERSATION_MARKER}" (nothing else) when:\n- Two people are clearly in their own back-and-forth and don't need you\n- The topic is completely outside your world and you have nothing real to offer\n- You would be forcing engagement — looking for excuses to speak rather than having something to say\n- You spoke recently and don't have something new to add\n\nUse ${IGNORE_CONVERSATION_MARKER} generously. A natural participant in a group chat is silent most of the time. Silence when you have nothing to say is better than speaking just to be present.`,
+      `\nHow you decide whether to respond:\n\nYou are in a group Discord chat. You participate with natural, human conversational instincts — not on every message, not randomly, but when you genuinely have something to contribute.\n\nRespond when:\n- Someone addresses you directly\n- The conversation touches something you genuinely care about and you have a real reaction, insight, or take to add — not just an excuse to mention your interests\n- There is a natural opening that fits your personality\n- You are already an active participant in the ongoing conversation thread (e.g. you responded recently and others are replying to you or carrying on the same thread. In any ongoing discussion you have already joined, remain active and respond organically to follow-up questions, direct prompts, or relevant replies, whether in a public channel or a private exchange).\n\nRespond with exactly "${IGNORE_CONVERSATION_MARKER}" (nothing else) when:\n- Two people are clearly in their own back-and-forth and don't need you\n- The topic is completely outside your world and you have nothing real to offer\n- You would be forcing engagement — looking for excuses to speak rather than having something to say\n- You spoke recently and have nothing new to add (but only if the conversation has moved on to a completely different topic or nobody is replying to or interacting with your previous messages. If people are still talking to you or discussing your points in an active thread, stay engaged and do NOT use ${IGNORE_CONVERSATION_MARKER})\n- Your only reaction is a hollow affirmation like "Great!", "Fantastic!", "Nice!", "Cool!" or similar — a one-word or one-phrase acknowledgment with no substance is worse than silence\n\nUse ${IGNORE_CONVERSATION_MARKER} generously when you are a passive bystander in multi-user group chats. A natural participant in a group chat is silent most of the time. Silence when you have nothing to say is better than speaking just to be present.\n\nWhen you do respond, give complete thoughts. Do not cut off mid-sentence. Responses up to a few sentences are fine.`,
     );
 
     return parts.join('');

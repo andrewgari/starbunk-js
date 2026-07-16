@@ -1,7 +1,7 @@
 import type { CovaProfile } from '@/models/memory-types';
 import type { YamlConfigType } from './personality-schema';
 import { deepFreeze } from './deep-freeze';
-import { normalizeIdentity, normalizeLlmConfig, normalizeSpeechPatterns } from './normalizers';
+import { normalizeLlmConfig, normalizeSpeechPatterns } from './normalizers';
 
 /**
  * Maps a validated, Zod-parsed YAML config to the immutable CovaProfile runtime model.
@@ -30,18 +30,19 @@ export function mapToCovaProfile(config: YamlConfigType): CovaProfile {
     backgroundFacts: (rawProfile.personality.background_facts ?? [])
       .map(s => String(s).trim())
       .filter(Boolean),
+    userRelationships: rawProfile.personality.user_relationships ?? {},
+    userVoices: rawProfile.personality.user_voices ?? {},
+    voices: {},
     speechPatterns: normalizeSpeechPatterns(rawProfile.personality.speech_patterns),
   } as CovaProfile['personality'];
 
   const result: CovaProfile = {
     id: rawProfile.id,
     displayName: rawProfile.display_name,
-    avatarUrl: rawProfile.avatar_url,
     // Lowercased so name-reference checks don't need case handling at call sites
     nameAliases: (rawProfile.name_aliases ?? [])
       .map(a => String(a).trim().toLowerCase())
       .filter(Boolean),
-    identity: normalizeIdentity(rawProfile.identity),
     personality,
     socialBattery: {
       // Truncate to integers and enforce minimums — YAML floats and zeros are common mistakes

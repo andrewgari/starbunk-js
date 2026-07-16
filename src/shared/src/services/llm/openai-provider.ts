@@ -57,7 +57,7 @@ export class OpenAIProvider implements LlmProvider {
       model,
       messages: openaiMessages,
       temperature: options.temperature ?? 0.7,
-      max_tokens: options.maxTokens ?? 500,
+      max_tokens: options.maxTokens ?? 1000,
     });
 
     const content = completion.choices[0]?.message?.content || '';
@@ -70,6 +70,8 @@ export class OpenAIProvider implements LlmProvider {
       model: completion.model,
       tokensUsed,
       provider: this.name,
+      // OpenAI SDK types finish_reason as string | null; ?? undefined normalises null → undefined
+      finishReason: completion.choices[0]?.finish_reason ?? undefined,
     };
   }
 }

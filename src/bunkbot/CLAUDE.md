@@ -1,5 +1,7 @@
 # BunkBot - Development Instructions
 
+> **Releasing:** Any change to `src/bunkbot/src/` requires a changeset. Run `npm run cs` from the repo root, pick `@starbunk/bunkbot`, choose the bump level, write one line. See `wiki/raw/Versioning.md`.
+
 ## Goals & Purpose
 BunkBot serves as the administrative backbone and general reply bot for the StarBunk system. It is optimized for high message volume and fast reaction times.
 

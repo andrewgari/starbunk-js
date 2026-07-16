@@ -21,11 +21,7 @@ export class WebhookService {
     }
   }
 
-  public async send(
-    message: Message,
-    identity: BotIdentity,
-    responseText: string,
-  ): Promise<Webhook> {
+  public async send(message: Message, identity: BotIdentity, responseText: string): Promise<void> {
     logger
       .withMetadata({
         channel_id: message.channelId,
@@ -34,17 +30,29 @@ export class WebhookService {
       })
       .debug('Sending webhook message');
 
-    // Get Channel
     const channel = await this.getTextChannel(message.channelId);
 
-    // Get Webhook
-    const webhook = await this.getOrCreateWebhook(channel);
+    let webhook: Webhook;
+    try {
+      webhook = await this.getOrCreateWebhook(channel);
+    } catch (error) {
+      const isPermissionError =
+        error instanceof Error && 'code' in error && (error as { code: number }).code === 50013;
+      if (isPermissionError) {
+        logger
+          .withMetadata({ channel_id: message.channelId, identity_name: identity.botName })
+          .warn(
+            'Missing Manage Webhooks permission — skipping response to preserve bot identity. Grant Manage Webhooks in this channel to enable responses.',
+          );
+        return;
+      }
+      throw error;
+    }
 
-    // Send Message
     await webhook.send({
       content: responseText,
       username: identity.botName,
-      avatarURL: identity.avatarUrl,
+      avatarURL: identity.avatarUrl || undefined,
       embeds: message.embeds,
     });
 
@@ -56,8 +64,6 @@ export class WebhookService {
         webhook_id: webhook.id,
       })
       .info('Webhook message sent successfully');
-
-    return webhook;
   }
 
   public async clearWebhooks(guildId: string): Promise<number> {
@@ -119,11 +125,12 @@ export class WebhookService {
       throw new Error(`Channel ${channelId} does not support webhooks`);
     }
 
-    // Try to find existing webhook
+    // Try to find existing webhook owned by this bot (token must be present to send)
     logger.withMetadata({ channel_id: channelId }).debug('Fetching webhooks for channel');
     const webhooks = await channel.fetchWebhooks();
     let webhook = webhooks.find(
-      wh => wh.name === WEBHOOK_NAME || wh.name.startsWith(WEBHOOK_NAME + ' '),
+      wh =>
+        wh.token !== null && (wh.name === WEBHOOK_NAME || wh.name.startsWith(WEBHOOK_NAME + ' ')),
     );
 
     if (webhook) {

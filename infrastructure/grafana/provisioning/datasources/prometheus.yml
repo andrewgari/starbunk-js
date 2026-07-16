@@ -1,0 +1,14 @@
+apiVersion: 1
+
+datasources:
+  - name: Starbunk Prometheus
+    type: prometheus
+    access: proxy
+    url: http://starbunk-prometheus:9090
+    isDefault: true
+    uid: starbunk-prometheus
+    jsonData:
+      httpMethod: POST
+      prometheusType: Prometheus
+      prometheusVersion: 2.53.0
+      timeInterval: 15s

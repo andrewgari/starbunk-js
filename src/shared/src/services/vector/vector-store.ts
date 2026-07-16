@@ -5,7 +5,6 @@
  * Provides fast cosine similarity search for embeddings.
  *
  * Design: Keeps vectors in memory for fast search, persists to SQLite for durability.
- * For larger scale, replace with Qdrant, Pinecone, or sqlite-vss.
  */
 
 import Database from 'better-sqlite3';

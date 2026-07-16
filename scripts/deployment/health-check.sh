@@ -20,9 +20,9 @@ cd "$COMPOSE_DIR"
 
 # Determine docker-compose command
 if command -v docker-compose &> /dev/null; then
-  COMPOSE_CMD="docker-compose"
+  COMPOSE_CMD="docker-compose --env-file stack.env"
 elif docker compose version &> /dev/null; then
-  COMPOSE_CMD="docker compose"
+  COMPOSE_CMD="docker compose --env-file stack.env"
 else
   echo "❌ Error: Neither docker-compose nor docker compose is available"
   exit 1

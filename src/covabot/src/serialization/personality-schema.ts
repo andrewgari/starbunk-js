@@ -4,25 +4,6 @@
 
 import { z } from 'zod';
 
-// Identity discriminated union
-export const identitySchema = z.discriminatedUnion('type', [
-  z.object({
-    type: z.literal('static'),
-    botName: z.string().describe('Display name for the bot'),
-    avatarUrl: z.string().url().optional().describe('Avatar URL for webhook messages'),
-  }),
-  z.object({
-    type: z.literal('mimic'),
-    as_member: z
-      .string()
-      .regex(/^\d{17,19}$/)
-      .describe('Discord User ID to mimic'),
-  }),
-  z.object({
-    type: z.literal('random'),
-  }),
-]);
-
 // Speech patterns
 export const speechPatternsSchema = z.object({
   lowercase: z.boolean().default(false).describe('Force lowercase responses'),
@@ -61,6 +42,16 @@ export const personalitySchema = z.object({
     .array(z.string())
     .default([])
     .describe('Personal background details — mentioned rarely and only when naturally relevant'),
+  user_relationships: z
+    .record(z.string(), z.string())
+    .default({})
+    .describe('Specific relationship rules or tone to adopt per user Discord ID'),
+  user_voices: z
+    .record(z.string(), z.string())
+    .default({})
+    .describe(
+      'Specific voice or speech style instructions to adopt per user Discord ID when directly addressing them',
+    ),
   speech_patterns: speechPatternsSchema.default({
     lowercase: false,
     sarcasm_level: 0.3,
@@ -84,19 +75,17 @@ export const socialBatterySchema = z.object({
 export const llmConfigSchema = z.object({
   model: z.string().default('gpt-4o-mini').describe('OpenAI model to use'),
   temperature: z.number().min(0).max(2).default(0.4).describe('Response creativity'),
-  max_tokens: z.number().int().positive().default(256).describe('Maximum response length'),
+  max_tokens: z.number().int().positive().default(1024).describe('Maximum response length'),
 });
 
 // Full profile schema
 export const profileSchema = z.object({
   id: z.string().describe('Unique internal identifier'),
   display_name: z.string().describe('Display name for Discord'),
-  avatar_url: z.string().url().optional().describe('Avatar URL for webhook'),
   name_aliases: z
     .array(z.string())
     .default([])
     .describe('Names and aliases the bot goes by — used as context signals for the LLM'),
-  identity: identitySchema,
   personality: personalitySchema,
   social_battery: socialBatterySchema.default({
     max_messages: 5,
@@ -106,7 +95,7 @@ export const profileSchema = z.object({
   llm: llmConfigSchema.default({
     model: 'gpt-4o-mini',
     temperature: 0.4,
-    max_tokens: 256,
+    max_tokens: 1024,
   }),
   memory: memoryConfigSchema.default({ channel_window: 8 }),
   ignore_bots: z.boolean().default(true).describe('Whether to ignore messages from other bots'),
@@ -119,7 +108,6 @@ export const yamlConfigSchema = z.object({
 
 // Type exports
 export type MemoryConfigType = z.infer<typeof memoryConfigSchema>;
-export type IdentityConfig = z.infer<typeof identitySchema>;
 export type SpeechPatternsConfig = z.infer<typeof speechPatternsSchema>;
 export type PersonalitySchemaType = z.infer<typeof personalitySchema>;
 export type SocialBatterySchemaType = z.infer<typeof socialBatterySchema>;
