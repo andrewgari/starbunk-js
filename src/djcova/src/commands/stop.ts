@@ -34,7 +34,10 @@ export default {
       logger
         .withError(error instanceof Error ? error : new Error(String(error)))
         .error('Error executing stop command');
-      await sendErrorResponse(interaction, 'An error occurred while stopping the music.');
+      const errorMessage =
+        error instanceof Error ? error.message : 'An error occurred while stopping the music.';
+
+      await sendErrorResponse(interaction, errorMessage);
     }
   },
 };
