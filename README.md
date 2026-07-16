@@ -48,6 +48,16 @@ StarBunk is built as **4 independent containers**, each handling specific functi
 - Reduced attack surface and resource usage
 - Faster startup times per service
 
+## 🔒 Security
+
+StarBunk implements security scanning via GitHub Actions:
+
+- **Manual Security Rescans**: Trigger vulnerability scans on-demand via GitHub Actions workflow
+- **Snyk Integration**: Use snyk-to-html for detailed vulnerability reports
+- **Workspace-aware scanning**: Scans all npm workspaces
+
+**📋 For detailed security information and rescan instructions, see [SECURITY.md](./SECURITY.md)**
+
 ## 🚀 Quick Start
 
 ### Prerequisites
