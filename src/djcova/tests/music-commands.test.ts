@@ -204,9 +204,19 @@ describe('Music Commands Tests', () => {
       );
     });
 
-    it('should handle service errors during stop', async () => {
+    it('returns the stop failure message to the user', async () => {
       mockService.stop.mockImplementation(() => {
         throw new Error('Stop failed');
+      });
+
+      await stopCommand.execute(mockInteraction as ChatInputCommandInteraction);
+
+      expect(mockedSendErrorResponse).toHaveBeenCalledWith(mockInteraction, 'Stop failed');
+    });
+
+    it('uses the generic stop failure message for non-Error throws', async () => {
+      mockService.stop.mockImplementation(() => {
+        throw 'Sensitive non-Error value';
       });
 
       await stopCommand.execute(mockInteraction as ChatInputCommandInteraction);
